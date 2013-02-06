@@ -34,7 +34,6 @@ void main (void) {
 </script>
 <script src="../../glsl.js" type="text/javascript"></script>
 <script type="text/javascript">
-  var canvas = document.getElementById("viewport");
   var startTime = Date.now();
   var glsl = Glsl({
     canvas: document.getElementById("viewport"),
