@@ -1,7 +1,7 @@
 glsl.js
 =======
 
-**glsl.js** is a subset of a WebGL library which focus on **making the GLSL ***(OpenGL Shading Language)*** easy and accessible** for vizualisation and game purposes.
+**glsl.js** is a subset of a WebGL library which focus on **making the GLSL easy and accessible** for vizualisation and game purposes.
 
 The concept is to split your **rendering part in a GLSL fragment**, and your **app/game logic part in Javascript**, and by maintaining a state to link both part (**a set of variables**).
 
