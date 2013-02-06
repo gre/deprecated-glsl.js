@@ -1,0 +1,43 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Hello World</title>
+</head>
+<body>
+
+<canvas id="viewport" width="600" height="400"></canvas>
+
+<script id="fragment" type="x-shader/x-fragment">
+#ifdef GL_ES
+precision mediump float;
+#endif
+uniform float time;
+uniform vec2 resolution;
+
+void main (void) {
+  vec2 p = ( gl_FragCoord.xy / resolution.xy );
+  gl_FragColor = vec4(p.x, p.y, (1.+cos(time))/2., 1.0);
+}
+</script>
+
+<script src="../../glsl.js" type="text/javascript"></script>
+<script type="text/javascript">
+  var canvas = document.getElementById("viewport");
+
+  var startTime = Date.now();
+
+  var glsl = Glsl({
+    canvas: document.getElementById("viewport"),
+    fragment: document.getElementById("fragment").innerHTML,
+    variables: {
+      time: 0 // The time in seconds
+    },
+    update: function () {
+      this.variables.time = (Date.now() - startTime)/1000;
+      this.sync("time");
+    }
+  }).start();
+</script>
+</body>
+</html>
