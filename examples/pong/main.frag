@@ -48,11 +48,11 @@ bool inScore (vec2 p, vec2 topleft, vec2 size, int score, int total, float thick
 }
 
 bool inPlayerScore (vec2 p) {
-  return inScore(p, vec2(0.01, 0.94), vec2(0.2, 0.05), playerCount, 10, 0.5, true);
+  return inScore(p, vec2(0.01, 0.97), vec2(0.4, 0.02), playerCount, 40, 0.5, true);
 }
 
 bool inComputerScore (vec2 p) {
-  return inScore(p, vec2(0.79, 0.94), vec2(0.2, 0.05), computerCount, 10, 0.5, false);
+  return inScore(p, vec2(0.59, 0.97), vec2(0.4, 0.02), computerCount, 40, 0.5, false);
 }
 
 void main (void) {
