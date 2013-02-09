@@ -1,8 +1,8 @@
-(function (root) {
+(function () {
 
   var requiredOptions = ["fragment", "canvas", "variables"];
 
-  var typesToSuffix = {
+  var typesSuffixMap = {
     "bool": "1i",
     "int": "1i",
     "float": "1f",
@@ -20,35 +20,87 @@
     "mat4": "Matrix4fv"
   };
 
-  function Glsl (options) {
+  var rUniform = /uniform\s+([a-z]+\s+)?([A-Za-z0-9]+)\s+([a-zA-Z_0-9]+)\s*(\[([0-9]+)\])?/;
+  var rStruct = /struct\s+\w+\s*{[^}]+}\s*;/g;
+  var rStructExtract = /struct\s+(\w+)\s*{([^}]+)}\s*;/;
+  var rStructFields = /[^;]+;/g;
+  var rStructField = /\s*([a-z]+\s+)?([A-Za-z0-9]+)\s+([a-zA-Z_0-9]+)\s*(\[([0-9]+)\])?\s*;/;
+
+  var Lprefix = "Glsl: ";
+  function log (msg) {
+    console.log && console.log(Lprefix+msg);
+  }
+  function warn (msg) {
+    if (console.warn) console.warn(Lprefix+msg);
+    else log("WARN "+msg);
+  }
+  function error (msg) {
+    if (console.error) console.error(Lprefix+msg);
+    else log("ERR "+msg);
+  }
+
+  /** 
+   * Creates a new Glsl.
+   * @param options
+   * @param {HTMLCanvasElement} options.canvas The Canvas to render.
+   * @param {String} options.fragment The fragment shader source code.
+   * @param {Object} options.variables The variables map (initial values).
+   * @param {Function} [options.update] The update function to call each frame. The relative time in milliseconds is given to the function (time from the start()).
+   *
+   * @namespace
+   */
+  this.Glsl = function (options) {
     if ( !(this instanceof arguments.callee) ) return new arguments.callee(options);
+    if (!options) throw new Error("Glsl: {"+requiredOptions+"} are required.");
     for (var i=0; i<requiredOptions.length; i++)  
       if (!(requiredOptions[i] in options)) 
-        throw "Glsl: option '"+requiredOptions[i]+"' is required.";
+        throw new Error("Glsl: '"+requiredOptions[i]+"' is required.");
 
     this.canvas = options.canvas;
-    this.variables = options.variables; // Variable references
-    this.locations = {}; // uniforms locations
-    this.update = options.update || function(){};
     this.fragment = options.fragment;
+    this.variables = options.variables; // Variable references
+    this.update = options.update || function(t){};
 
-    this.inferTypes();
-    if (!this.types.resolution) {
-      throw "You must use a 'vec2 resolution' in your shader.";
+    this.parseStructs();
+    this.parseUniforms();
+
+    if (!this.uniformTypes.resolution) throw new Error("Glsl: You must use a 'vec2 resolution' in your shader.");
+    delete this.uniformTypes.resolution; // We don't bind it naturally
+
+    for (var v in this.uniformTypes) {
+      if (!(v in this.variables)) {
+        warn("variable '"+v+"' not initialized");
+      }
     }
-    delete this.types.resolution; // We don't bind it naturally
     
     this.initGL();
-  }
+    this.load();
+    this.syncAll();
+    this.update(0);
+    this.render();
+  };
+
+  /**
+   * Checks if WebGL is supported by the browser.
+   * @type boolean
+   * @public
+   */
+  Glsl.supported = function () {
+    return !!getWebGLContext(document.createElement("canvas"));
+  };
 
   Glsl.prototype = {
 
+    // ~~~ Public Methods
+
+    /**
+     * Starts the render and update loop.
+     * @public
+     */
     start: function () {
+      var startTime = Date.now();
+      var lastTime = startTime;
       var self = this;
-      this.syncAll();
-      // try a first step before looping (abort if error are thrown)
-      self.update();
-      self.render();
       this.running = true;
       requestAnimationFrame(function loop () {
         if (this.stopRequest) { // handle stop request
@@ -57,35 +109,57 @@
           return;
         }
         requestAnimationFrame(loop, self.canvas);
-        self.update();
+        var t = Date.now()-startTime;
+        var delta = t-lastTime;
+        lastTime = t;
+        self.update(t, delta);
         self.render();
       }, self.canvas);
       return this;
     },
 
+    /**
+     * Stops the render and update loop.
+     * @public
+     */
     stop: function () {
       this.stopRequest = true;
     },
 
-    inferTypes: function () {
-      var lines = this.fragment.split("\n");
-      var r = /uniform\s+([A-Za-z0-9]+)\s+([a-zA-Z_0-9]+)\s*(\[([0-9]+)\])?/;
-      this.types = {};
-      this.typesArrayLength = {};
-      for (var l=0; l<lines.length; ++l) {
-        var line = lines[l];
-        var matches = line.match(r);
-        if (matches) {
-          var type = typesToSuffix[matches[1]] || matches[1];
-          var vname = matches[2];
-          if (matches[4]) {
-            this.typesArrayLength[name] = parseInt(matches[4], 10);
-            type += "v";
-          }
-          this.types[vname] = type;
-        }
+    /** 
+     * Synchronizes variables from the Javascript into the GLSL.
+     * @param {String} variableNames* all variables to synchronize.
+     * @public
+     */
+    sync: function (/*var1, var2, ...*/) {
+      for (var i=0; i<arguments.length; ++i) {
+        var v = arguments[i];
+        this.syncVariable(v);
       }
     },
+
+    /** 
+     * Synchronizes all variables.
+     * Prefer using sync for a deeper optimization.
+     * @public
+     */
+    syncAll: function () {
+      for (var v in this.variables) this.syncVariable(v);
+    },
+
+    /**
+     * Set and synchronize a variable to a value.
+     *
+     * @param {String} vname the variable name to set and synchronize.
+     * @param {Any} vvalue the value to set.
+     * @public
+     */
+    set: function (vname, vvalue) {
+      this.variables[vname] = vvalue;
+      this.sync(vname);
+    },
+
+    // ~~~ Going Private Now
 
     initGL: function () {
       var self = this;
@@ -97,54 +171,105 @@
         self.load();
       }, false);
       this.gl = this.getWebGLContext(this.canvas);
-      this.load();
     },
 
     render: function () {
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
     },
 
-    sync: function (/*var1, var2, ...*/) {
-      for (var i=0; i<arguments.length; ++i) {
-        var v = arguments[i];
-        this.syncVariable(v);
+    parseStructs: function () {
+      this.structTypes = {};
+      var structs = this.fragment.match(rStruct);
+      if (!structs) return;
+      for (var s=0; s<structs.length; ++s) {
+        var struct = structs[s];
+        var structExtract = struct.match(rStructExtract);
+        var structName = structExtract[1];
+        var structBody = structExtract[2];
+        var fields = structBody.match(rStructFields);
+        var structType = {};
+        for (var f=0; f<fields.length; ++f) {
+          var field = fields[f];
+          var matches = field.match(rStructField);
+          var nativeType = matches[2],
+              vname = matches[3],
+              arrayLength = matches[4];
+          var type = typesSuffixMap[nativeType] || nativeType;
+          if (arrayLength) {
+            type += "v";
+          }
+          structType[vname] = type;
+        }
+        this.structTypes[structName] = structType;
       }
     },
 
-    syncAll: function () {
-      for (var v in this.variables) this.syncVariable(v);
+    parseUniforms: function () {
+      this.uniformTypes = {};
+      var lines = this.fragment.split("\n");
+      for (var l=0; l<lines.length; ++l) {
+        var line = lines[l];
+        var matches = line.match(rUniform);
+        if (matches) {
+          var nativeType = matches[2],
+              vname = matches[3],
+              arrayLength = matches[4];
+          var type = typesSuffixMap[nativeType] || nativeType;
+          if (arrayLength) {
+            type += "v";
+          }
+          this.uniformTypes[vname] = type;
+        }
+      }
     },
 
     syncVariable: function (name) {
+      return this.recSyncVariable(name, this.variables[name], this.uniformTypes[name],  name);
+    },
+
+    recSyncVariable: function (name, value, type, varpath) {
       var gl = this.gl;
-      var type = this.types[name];
-      if (!type) throw "Variable '"+name+"' not found in your GLSL.";
-      var loc = this.locations[name];
-      var value = this.variables[name];
-      var fn = "uniform"+type;
-      switch (type) {
-        case "2f":
-        case "2i":
-          gl[fn].call(gl, loc, value.x, value.y);
-          break;
+      if (!type) {
+        warn("variable '"+name+"' not found in your GLSL.");
+        return;
+      }
+      var loc = this.locations[varpath];
+      if (type in this.structTypes) {
+        var structType = this.structTypes[type];
+        for (var field in structType) {
+          var fieldType = structType[field];
+          this.recSyncVariable(field, value[field], fieldType, varpath+"."+field);
+        }
+      }
+      else {
+        var fn = "uniform"+type;
+        switch (type) {
+          case "2f":
+          case "2i":
+            gl[fn].call(gl, loc, value.x, value.y);
+            break;
 
-        case "3f":
-        case "3i":
-          gl[fn].call(gl, loc, value.x, value.y, value.z);
-          break;
+          case "3f":
+          case "3i":
+            gl[fn].call(gl, loc, value.x, value.y, value.z);
+            break;
 
-        case "4f":
-        case "4i":
-          gl[fn].call(gl, loc, value.x, value.y, value.z, value.w);
-          break;
+          case "4f":
+          case "4i":
+            gl[fn].call(gl, loc, value.x, value.y, value.z, value.w);
+            break;
 
-        case "sampler2D": 
-          this.syncTexture(gl, loc, value, name); 
-          break;
+          case "sampler2D": 
+            this.syncTexture(gl, loc, value, name); 
+            break;
 
-        default:
-          gl[fn].call(gl, loc, value);
-          break;
+          default:
+            if (gl[fn])
+              gl[fn].call(gl, loc, value);
+            else
+              error("type '"+type+"' not found.");
+            break;
+        }
       }
     },
 
@@ -157,9 +282,9 @@
     },
 
     allocTexture: function (name) {
-      var textureUnit = this.currentTextureUnit;
+      var textureUnit = this.textureUnitCounter;
       this.textureUnitForNames[name] = textureUnit;
-      this.currentTextureUnit ++;
+      this.textureUnitCounter ++;
     },
 
     createTexture: function (image) {
@@ -175,22 +300,26 @@
       return texture;
     },
 
-    bindUniformLocations: function () {
-      for (var v in this.types) {
-        this.locations[v] = this.gl.getUniformLocation(this.program, v);
+    initUniformLocations: function () {
+      this.locations = {}; // uniforms locations
+      for (var v in this.uniformTypes)
+        this.recBindLocations(v, this.uniformTypes[v], v);
+    },
+
+    recBindLocations: function (name, type, varpath) {
+      if (type in this.structTypes) {
+        var structType = this.structTypes[type];
+        for (var field in structType) {
+          this.recBindLocations(field, structType[field], varpath+"."+field);
+        }
+      }
+      else {
+        this.locations[varpath] = this.gl.getUniformLocation(this.program, varpath);
       }
     },
 
-    // WebGL
     getWebGLContext: function () {
-      if (!this.canvas.getContext) return;
-      var names = ["webgl", "experimental-webgl"];
-      for (var i = 0; i < names.length; ++i) {
-        try {
-          var ctx = this.canvas.getContext(names[i]);
-          if (ctx) return ctx;
-        } catch(e) {}
-      }
+      return getWebGLContext(this.canvas);
     },
 
     syncResolution: function () {
@@ -217,7 +346,6 @@
       if (this.program) {
         gl.deleteProgram(this.program);
         this.program = null;
-        this.locations = {};
       }
 
       // Create new program
@@ -228,16 +356,15 @@
       gl.useProgram(this.program);
 
       // Bind custom variables
-      this.bindUniformLocations();
+      this.initUniformLocations();
 
       // Init textures
       this.textureUnitForNames = {};
-      this.currentTextureUnit = 0;
-      for (var v in this.types) {
-        var t = this.types[v];
-        if (t == "sampler2D") {
+      this.textureUnitCounter = 0;
+      for (var v in this.uniformTypes) {
+        var t = this.uniformTypes[v];
+        if (t == "sampler2D")
           this.allocTexture(v);
-        }
       }
 
       // buffer
@@ -270,9 +397,8 @@
 
       var linked = gl.getProgramParameter(program, gl.LINK_STATUS);
       if (!linked) {
-        throw "Linking error:" + gl.getProgramInfoLog(program);
         gl.deleteProgram(program);
-        return null;
+        throw new Error(program+" "+gl.getProgramInfoLog(program));
       }
       return program;
     },
@@ -285,19 +411,31 @@
       var compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
       if (!compiled) {
         lastError = gl.getShaderInfoLog(shader);
-        if (console.error) {
-          var split = lastError.split(":");
-          var line = split[2];
-          line && console.error("Error for line "+line+": " + shaderSource.split("\n")[line]);
+        var split = lastError.split(":");
+        var col = parseInt(split[1], 10);
+        var line = split[2];
+        var s = "";
+        if (!isNaN(col)) {
+          var spaces = ""; for (var i=0; i<col; ++i) spaces+=" ";
+          s = "\n"+spaces+"^";
         }
-        throw shader + "':" + lastError;
+        error(lastError+"\n"+shaderSource.split("\n")[line]+s);
         gl.deleteShader(shader);
-        return null;
+        throw new Error(shader+" "+lastError);
       }
       return shader;
     }
   };
 
-  root.Glsl = Glsl;
+  function getWebGLContext (canvas) {
+    if (!canvas.getContext) return;
+    var names = ["webgl", "experimental-webgl"];
+    for (var i = 0; i < names.length; ++i) {
+      try {
+        var ctx = canvas.getContext(names[i]);
+        if (ctx) return ctx;
+      } catch(e) {}
+    }
+  }
 
-}(window));
+}());

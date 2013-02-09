@@ -35,10 +35,26 @@
         callback(img)
       };
       img.src = url;
+    },
+
+    audio: function (urlPrefix, callback) {
+      var audio = new Audio();
+      var source;
+      source = document.createElement('source');
+      source.type = 'audio/mpeg';
+      source.src = urlPrefix+'.mp3';
+      audio.appendChild(source);
+      source = document.createElement('source');
+      source.type = 'audio/ogg';
+      source.src = urlPrefix+'.ogg';
+      audio.appendChild(source);
+      audio.load();
+      callback(audio); // Don't wait for audio load for now
     }
   };
 
   L.images = makeMultiLoader(L.image);
   L.texts = makeMultiLoader(L.text);
+  L.audios = makeMultiLoader(L.audio);
 
 }).call(this);

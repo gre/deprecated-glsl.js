@@ -2,30 +2,32 @@
 precision mediump float;
 #endif
 
+struct Player {
+  vec2 position;
+  vec2 dimension;
+  vec2 shake;
+  int count;
+  int xDirection;
+  float lastTouch;
+};
+
+struct Ball {
+  vec2 center;
+  float radius;
+  vec2 velocity;
+  vec2 shake;
+};
+
 uniform float time;
 uniform vec2 resolution;
-uniform float BALL_RADIUS;
-uniform vec2 PLAYER_DIMENSION;
-uniform vec2 player;
-uniform vec2 computer;
-uniform vec2 ball;
-uniform vec2 playerShake;
 
-uniform int playerCount;
-uniform int computerCount;
-
+uniform Ball ball;
+uniform Player player;
+uniform Player computer;
 
 bool inCircle (vec2 p, vec2 center, float radius) {
   vec2 ratio = resolution/resolution.x;
   return distance(p*ratio, center*ratio) < radius;
-}
-
-bool inPlayer (vec2 position, vec2 player) {
-  return all(lessThan(2.*abs(position-player), PLAYER_DIMENSION));
-}
-
-bool inBall (vec2 position, vec2 ball) {
-  return inCircle(position, ball, BALL_RADIUS);
 }
 
 bool inScore (vec2 p, vec2 topleft, vec2 size, int score, int total, float thickness, bool leftToRight) {
@@ -47,38 +49,39 @@ bool inScore (vec2 p, vec2 topleft, vec2 size, int score, int total, float thick
   return false;
 }
 
-bool inPlayerScore (vec2 p) {
-  return inScore(p, vec2(0.01, 0.97), vec2(0.4, 0.02), playerCount, 40, 0.5, true);
+bool inPlayer (vec2 position, Player player) {
+  return all(lessThan(2.*abs(position-(player.position+player.shake)), player.dimension));
 }
 
-bool inComputerScore (vec2 p) {
-  return inScore(p, vec2(0.59, 0.97), vec2(0.4, 0.02), computerCount, 40, 0.5, false);
+bool inBall (vec2 position, Ball ball) {
+  return inCircle(position, ball.center+ball.shake, ball.radius);
+}
+
+bool inPlayerScore (vec2 p, Player player) {
+  return inScore(p, vec2(player.xDirection==1 ? 0.01: 0.59, 0.97), vec2(0.4, 0.02), player.count, 40, 0.5, player.xDirection==1);
 }
 
 void main (void) {
   vec2 p = ( gl_FragCoord.xy / resolution.xy );
   vec2 ratio = resolution/resolution.x;
-  vec4 c = vec4(0.9, 0.5, 0.5+sin(time)/5., 1.0)*(1.5-0.9*distance(p*ratio,ball*ratio));
+  float ballDistance = distance(p*ratio,ball.center*ratio);
+  vec3 c = vec3(0.9, 0.5, 0.5+sin(time/1000.)/5.)*(1.8-1.5*ballDistance);
 
-  if (inPlayer(p, player+playerShake)) {
-    c *= 0.2;
+  if (inPlayer(p, player)) {
+    c *= 0.7*(1.0-smoothstep(500., 0., time-player.lastTouch));
   }
 
   if (inPlayer(p, computer)) {
-    c *= 0.2;
+    c *= 0.7*(1.0-smoothstep(500., 0., time-computer.lastTouch));
   }
 
-  if (inBall(p, ball+playerShake)) {
+  if (inPlayerScore(p, player) || inPlayerScore(p, computer)) {
     c *= 0.5;
   }
 
-  if (inPlayerScore(p)) {
-    c *= 0.8;
+  if (inBall(p, ball)) {
+    c *= 1.2;
   }
 
-  if (inComputerScore(p)) {
-    c *= 0.8;
-  }
-
-  gl_FragColor = c;
+  gl_FragColor = vec4(c, 1.0);
 }

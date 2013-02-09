@@ -1,3 +1,7 @@
+* [Open Examples](http://greweb.fr/glsl.js/examples)
+* [API Documentation](http://greweb.fr/glsl.js/docs)
+* [React on the blog article](http://blog.greweb.fr/?p=2130)
+
 glsl.js
 =======
 
@@ -14,10 +18,19 @@ What you only need to care about is the logic in Javascript and the rendering in
 
 By design, **you can't mix logic and render part**, this approach really helps to focus on essential things separately.
 
+Efficiency
+----
+
+
+Look, I'm able to run my HTML5 game at 60fps on my Nexus 7 tablet (Chrome Beta):
+
+[VIDEO TODO]
+
+
 Full Example
 ----
 
-Here is a Hello World example. For more examples, see the `examples/` folder of the project.
+Here is an Hello World example. For more examples, see [/examples](http://greweb.fr/glsl.js/examples).
 
 ```html
 <canvas id="viewport" width="600" height="400"></canvas>
@@ -34,16 +47,14 @@ void main (void) {
 </script>
 <script src="../../glsl.js" type="text/javascript"></script>
 <script type="text/javascript">
-  var startTime = Date.now();
   var glsl = Glsl({
     canvas: document.getElementById("viewport"),
     fragment: document.getElementById("fragment").innerHTML,
     variables: {
-      time: 0 // The time in seconds
+      time: 0 // The time in ms
     },
-    update: function () {
-      this.variables.time = (Date.now() - startTime)/1000;
-      this.sync("time");
+    update: function (time) {
+      this.set("time", time);
     }
   }).start();
 </script>
@@ -78,7 +89,7 @@ Then you can start/stop the rendering via method (`.start()` and `.stop()`).
 The `update` function is called as soon as possible by the library. It is called in a `requestAnimationFrame` context.
 
 You must define all variables shared by both logic and render part in a Javascript object `{varname: value}`.
-Variables must match your GLSL uniform variables. Every time you update your variables and you want to synchronise them with the GLSL you have to manually call the `sync` function by giving all variables name to synchronise.
+Variables must match your GLSL uniform variables. Every time you update your variables and you want to synchronize them with the GLSL you have to manually call the `sync` function by giving all variables name to synchronize.
 
 **Exemple:**
 
@@ -133,6 +144,58 @@ Use `Int32Array` for `int[]` and `bool[]`.
 Vector arrays are also possible. In Javascript, you will have to give a linearized array.
 For instance, 
 a `vec2[2]` will be `[vec2(1.0, 2.0), vec2(3.0, 4.0)]` if `Float32Array(1.0, 2.0, 3.0, 4.0)` is used.
+
+Using objects
+------------
+
+Even more interesting now, you can synchronize a whole object into the GLSL world. This is very interesting for Object-Oriented approach.
+
+
+**Example:**
+
+In GLSL,
+```glsl
+struct Circle {
+  vec2 center;
+  float radius;
+}
+uniform Circle c1;
+bool inCircle (vec2 p, Circle c) {
+  vec2 ratio = resolution/resolution.x;
+  return distance(p*ratio, c.center*ratio) < c.radius;
+}
+void main (void) {
+  vec2 p = ( gl_FragCoord.xy / resolution.xy );
+  if (inCircle(p, c1))
+    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+  else
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+}
+```
+
+In Javascript,
+```javascript
+function Circle (x, y, radius) {
+  this.center = { x: x, y: y };
+  this.radius = radius;
+  this.originalRadius = radius; // not visible by GLSL
+}
+Circle.prototype.update = function () {
+  this.radius = this.originalRadius+Math.sin(Date.now()/100);
+}
+var c1 = new Circle(0.5, 0.5, 0.1);
+var glsl = Glsl({
+  ...
+  variable: {
+  	c1: c1
+  },
+  update: function () {
+    c1.update();
+    this.sync("c1");
+  }
+}).start();
+```
+
 
 Using images
 ------------

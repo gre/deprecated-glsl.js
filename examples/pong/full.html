@@ -1,0 +1,36 @@
+<!DOCTYPE HTML>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=1" />
+  <meta charset="UTF-8">
+  <title>Pong</title>
+  <style type="text/css">
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="viewport"></canvas>
+
+  <script src="../lib/rAF.js" type="text/javascript"></script>
+  <script src="../lib/Loader.js" type="text/javascript"></script>
+  <script src="../lib/jsfx/audio.js" type="text/javascript"></script>
+  <script src="../lib/jsfx/jsfx.js" type="text/javascript"></script>
+  <script src="../lib/jsfx/jsfxlib.js" type="text/javascript"></script>
+
+  <script src="../../glsl.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    var canvas = document.getElementById("viewport");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  </script>
+  <script type="text/javascript" src="main.js"></script>
+</body>
+</html>
+
