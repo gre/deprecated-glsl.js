@@ -172,7 +172,6 @@ Loader.text("main.frag",
     }
 
     function play (sound) {
-      sound.load();
       sound.play();
     }
 
