@@ -4,10 +4,30 @@ if (!Glsl.supported()) alert("WebGL is not supported.");
 Loader.audios([ "audio/beep1", "audio/beep2", "audio/lose", "audio/win", "audio/bounce"], 
   function (beep1, beep2, lose, win, bounce) {
 
+  var BUFFERS = 5;
+  var sounds = [beep1, beep2, lose, win, bounce];
+  var buffers = [];
+  var currents = [];
+  for (var i=0; i<sounds.length; ++i) {
+    var buffer = buffers[i] = [];
+    currents[i] = 0;
+    for (var j=0; j<BUFFERS; ++j) {
+      var n = sounds[i].cloneNode();
+      n.innerHTML = sounds[i].innerHTML;
+      n.load();
+      buffer[j] = n;
+    }
+  }
+
+  function play (sound) {
+    var i = sounds.indexOf(sound);
+    var curr = currents[i];
+    buffers[i][curr].play();
+    currents[i] = curr+1<BUFFERS ? curr+1 : 0;
+  }
+
 Loader.text("main.frag", 
   function (mainFrag) {
-    var PLAYER_DIMENSION = { x: 0.02, y: 0.2 };
-
     var hasTouch = ('ontouchstart' in window);
     var now = 0;
 
@@ -45,15 +65,22 @@ Loader.text("main.frag",
       this.dimension = dimension;
       this.shake = new Vec2(0, 0);
       this.count = 0;
+      this.countSucc = 0;
       this.lastTouch = -99999;
       this.xDirection = xDirection;
+      this.balls = [];
     }
 
     Player.prototype = {
       update: function () {
+        this.dimension.y = 0.2 + Math.min(0.2, this.countSucc/40);
+
         if (this.hasBall()) {
-          this.ball.center.y = this.position.y;
-          this.ball.center.x = this.position.x+this.xDirection*0.04 + 0.01*Math.sin((now-this.takeBallTime)/100);
+          for (var i=0; i<this.balls.length; ++i) {
+            var ball = this.balls[i];
+            ball.center.y = this.position.y;
+            ball.center.x = this.position.x+this.xDirection*0.04 + 0.01*Math.sin((now-this.takeBallTime)/100);
+          }
           this.shake.x = .01*Math.random();
           this.shake.y = .01*Math.random();
         }
@@ -63,15 +90,16 @@ Loader.text("main.frag",
         }
       },
       hasBall: function () {
-        return !!this.ball;
+        return this.balls.length>0;
       },
       sendBall: function () {
-        this.ball.velocity.x = this.xDirection*(0.0005+0.0001*Math.random());
-        this.ball.velocity.y = 0.0001*(0.0005-Math.random());
-        this.ball = null;
+        var ball = this.balls.pop();
+        if (ball===undefined) return;
+        ball.velocity.x = this.xDirection*(0.0005+0.0001*Math.random());
+        ball.velocity.y = 0.0001*(0.0005-Math.random());
       },
       obtainBall: function (ball) {
-        this.ball = ball;
+        this.balls.push(ball);
         ball.shake = this.shake;
         ball.velocity.x = 0;
         ball.velocity.y = 0;
@@ -94,11 +122,13 @@ Loader.text("main.frag",
       this.center = center;
       this.radius = radius;
       this.velocity = new Vec2(0, 0);
+      this.shake = new Vec2(0, 0);
+      this.creationTime = now;
     }
 
     Ball.prototype = {
       hitWall: function (touchTop) {
-        ball.velocity.y = touchTop * Math.abs(ball.velocity.y);
+        this.velocity.y = touchTop * Math.abs(this.velocity.y);
         play(bounce);
       },
       update: function (delta) {
@@ -111,20 +141,29 @@ Loader.text("main.frag",
         this.center.add(v);
       },
       collidePlayer: function (player) {
-        return player.position.x-player.dimension.x/2 <= this.center.x+ball.radius &&
-          this.center.x-ball.radius <= player.position.x+player.dimension.x/2 &&
-          player.position.y-player.dimension.y/2 <= this.center.y+ball.radius &&
-          this.center.y-ball.radius <= player.position.y+player.dimension.y/2;
+        return player.position.x-player.dimension.x/2 <= this.center.x+this.radius &&
+          this.center.x-this.radius <= player.position.x+player.dimension.x/2 &&
+          player.position.y-player.dimension.y/2 <= this.center.y+this.radius &&
+          this.center.y-this.radius <= player.position.y+player.dimension.y/2;
       }
     };
 
     // Game states
 
-    var player = new Player(new Vec2(0.02, 0.5), new Vec2(0.02, 0.2), 1);
-    var computer = new Player(new Vec2(0.98, 0.5), new Vec2(0.02, 0.2), -1);
-    var ball = new Ball(new Vec2(0.05, 0.5), 0.015);
+    var player = new Player(new Vec2(0.05, 0.5), new Vec2(0.01, 0.2), 1);
+    var computer = new Player(new Vec2(0.95, 0.5), new Vec2(0.01, 0.2), -1);
+    var balls = [];
 
-    player.obtainBall(ball);
+    function addBall () {
+      var b = new Ball(new Vec2(0.5, 0.5), 0.015);
+      balls.push(b);
+      return b;
+    }
+
+    function removeBall (ball) {
+      var i = balls.indexOf(ball);
+      i!=-1 && balls.splice(i, 1);
+    }
 
     var mouseP = new Vec2(0, 0.5);
 
@@ -148,32 +187,42 @@ Loader.text("main.frag",
       });
     }
 
-    function constraintPlayerY (y) {
-      return Math.max(PLAYER_DIMENSION.y/2, Math.min(y, 1-PLAYER_DIMENSION.y/2));
-    }
-
-    var lastDecision = 0;
+    var lastSend = 0;
+    var lastDirection = 0;
     var moveTargetY = 0.5;
     var moveSpeed = 0.1;
-    function computerAI (computer, ball) {
+    var decisionDirectionFreq = 0;
+    function computerAI (computer) {
       var now = Date.now();
-      var t = now - lastDecision;
-      if (t > 500) {
-        lastDecision = now;
+      var t = now - lastSend;
+      if (t > 1000) {
+        lastSend = now;
         if (computer.hasBall()) {
           computer.sendBall();
         }
       }
-      moveTargetY = ball.y;
-      if (!computer.hasBall() && !player.hasBall()) {
-        var delta = computer.position.y - moveTargetY;
-        computer.setY(computer.position.y - delta * moveSpeed);
+      t = now - lastDirection;
+      if (t > decisionDirectionFreq) {
+        decisionDirectionFreq = 20 + (computer.count-player.count)*50;
+        lastDirection = now;
+        if (balls.length == 0) return;
+        var ball = balls[0];
+        for (var i=0; i<balls.length; i++) {
+          var b = balls[i];
+          if (b.center.x > ball.center.x)
+            ball = b;
+        }
+        var prediction = decisionDirectionFreq*ball.velocity.y*(computer.position.x-ball.center.x);
+        moveTargetY = ball.center.y + prediction;
       }
+      var delta = computer.position.y - moveTargetY;
+      computer.setY(computer.position.y - delta * moveSpeed);
     }
 
-    function play (sound) {
-      sound.play();
-    }
+    var ballAddFrequency = 7000;
+
+    var MAX_BALLS = 10;
+    var lastBallAdded = 0;
 
     var glsl = Glsl({
       canvas: canvas,
@@ -181,46 +230,76 @@ Loader.text("main.frag",
       variables: {
         player: player,
         computer: computer,
-        ball: ball,
+        balls: balls,
+        ballsLength: balls.length,
+        lastBallFail: -99999,
         time: 0
+      },
+      init: function () {
+        player.obtainBall(addBall());
       },
       update: function (t, delta) {
         this.set("time", t);
         now = t;
 
+        if (t-lastBallAdded > ballAddFrequency && balls.length<MAX_BALLS) {
+          lastBallAdded = t;
+          var b = addBall();
+          var a = Math.random()*Math.PI*2;
+          if (Math.abs(a%Math.PI-Math.PI/2)<Math.PI/4) {
+            a+= Math.PI/2;
+          }
+          b.velocity.x = Math.cos(a)*0.0006;
+          b.velocity.y = Math.sin(a)*0.0006;
+          ballAddFrequency = Math.max(1000, ballAddFrequency*0.96);
+        }
+
         player.setY(1 - mouseP.y / canvasHeight);
         player.update(delta);
 
-        computerAI(computer, ball.center);
+        computerAI(computer);
         computer.update(delta);
 
-        if (ball.collidePlayer(player)) {
-          if (player.lastTouch+100<t)
-            play(beep1);
-          player.pushBall(ball);
+        for (var i=0; i<balls.length; ++i) {
+          var ball = balls[i];
+          if (ball.collidePlayer(player)) {
+            if (player.lastTouch+100<t)
+              play(beep1);
+            player.pushBall(ball);
+          }
+
+          if (ball.collidePlayer(computer)) {
+            if (player.lastTouch+100<t)
+              play(beep2);
+            computer.pushBall(ball);
+          }
+
+          ball.update(delta);
+
+          if (ball.center.x > 1.0) {
+            removeBall(ball);
+            if (balls.length == 0)
+              player.obtainBall(addBall());
+            player.count ++;
+            player.countSucc ++;
+            computer.countSucc = 0;
+            play(win);
+          }
+
+          if (ball.center.x < 0.0) {
+            removeBall(ball);
+            if (balls.length == 0)
+              computer.obtainBall(addBall());
+            computer.count ++;
+            computer.countSucc ++;
+            player.countSucc = 0;
+            play(lose);
+            this.set("lastBallFail", t);
+          }
         }
 
-        if (ball.collidePlayer(computer)) {
-          if (player.lastTouch+100<t)
-            play(beep2);
-          computer.pushBall(ball);
-        }
-
-        ball.update(delta);
-
-        if (ball.center.x > 1.0) {
-          player.obtainBall(ball);
-          player.count ++;
-          play(win);
-        }
-
-        if (ball.center.x < 0.0) {
-          computer.obtainBall(ball);
-          computer.count ++;
-          play(lose);
-        }
-
-        this.sync("player", "computer", "ball");
+        this.set("ballsLength", balls.length);
+        this.sync("player", "computer", "balls");
       }
     }).start();
 
