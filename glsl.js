@@ -45,7 +45,8 @@
    * @param {HTMLCanvasElement} options.canvas The Canvas to render.
    * @param {String} options.fragment The fragment shader source code.
    * @param {Object} options.variables The variables map (initial values).
-   * @param {Function} [options.update] The update function to call each frame. The relative time in milliseconds is given to the function (time from the start()).
+   * @param {Function} [options.update] The update function to call each frame. (the relative time from the start() and the time since the last update) in milliseconds is given to the function.
+   * @param {Function} [options.init] Call once when GL is initialized.
    *
    * @namespace
    */
@@ -76,7 +77,8 @@
     this.initGL();
     this.load();
     this.syncAll();
-    this.update(0);
+    options.init && options.init();
+    this.update(0, 0);
     this.render();
   };
 
@@ -99,7 +101,7 @@
      */
     start: function () {
       var startTime = Date.now();
-      var lastTime = startTime;
+      var lastTime = 0;
       var self = this;
       this.running = true;
       requestAnimationFrame(function loop () {
@@ -248,7 +250,7 @@
             var v = value[i];
             for (var field in structType) {
               if (!(field in v)) {
-                warn("variable '"+varpath+"' ("+type+") has no field '"+field+"'");
+                warn("variable '"+varpath+"["+i+"]' ("+type+") has no field '"+field+"'");
                 break;
               }
               var fieldType = structType[field];

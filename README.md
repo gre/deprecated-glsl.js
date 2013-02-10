@@ -57,7 +57,7 @@ void main (void) {
     variables: {
       time: 0 // The time in ms
     },
-    update: function (time) {
+    update: function (time, delta) {
       this.set("time", time);
     }
   }).start();
@@ -105,8 +105,8 @@ Glsl({
     time: 0, // The time in seconds
     random1: 0
   },
-  update: function () {
-	this.variables.time = Date.now();
+  update: function (time, delta) {
+	this.variables.time = time;
 	this.variables.random1 = Math.random();
 	this.sync("random1", "time");
   }
@@ -193,7 +193,7 @@ Glsl({
   variable: {
   	c1: c1
   },
-  update: function () {
+  update: function (time, delta) {
     c1.update();
     this.sync("c1");
   }
