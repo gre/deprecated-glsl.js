@@ -106,9 +106,8 @@ Glsl({
     random1: 0
   },
   update: function (time, delta) {
-	this.variables.time = time;
-	this.variables.random1 = Math.random();
-	this.sync("random1", "time");
+	this.set("time", time);
+	this.set("random1", Math.random());
   }
 }).start();
 ```
