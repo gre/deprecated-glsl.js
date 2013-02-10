@@ -1,6 +1,9 @@
 * [Open Examples](http://greweb.fr/glsl.js/examples)
 * [API Documentation](http://greweb.fr/glsl.js/docs)
 * [React on the blog article](http://blog.greweb.fr/?p=2130)
+* [Unit tests](http://greweb.fr/glsl.js/test)
+
+[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=greweb&url=http://github.com/gre/glsl.js&title=glsl.js&language=&tags=github&category=software)
 
 glsl.js
 =======
@@ -27,7 +30,7 @@ Look, I'm able to run my HTML5 game at 60fps on my Nexus 7 tablet (Chrome Beta):
 [VIDEO TODO]
 
 
-Full Example
+Hello World Example
 ----
 
 Here is an Hello World example. For more examples, see [/examples](http://greweb.fr/glsl.js/examples).
@@ -184,7 +187,7 @@ Circle.prototype.update = function () {
   this.radius = this.originalRadius+Math.sin(Date.now()/100);
 }
 var c1 = new Circle(0.5, 0.5, 0.1);
-var glsl = Glsl({
+Glsl({
   ...
   variable: {
   	c1: c1
@@ -196,6 +199,40 @@ var glsl = Glsl({
 }).start();
 ```
 
+structs inside structs are also supported:
+```glsl
+struct Circle {
+  vec2 center;
+  float radius;
+}
+struct Player {
+  Circle circle;
+  bool visible;
+}
+```
+
+
+Using Arrays of Objects
+-----
+The two previous chapters can be assemble!
+
+Yes man, Array of JS object is possible!
+
+```glsl
+uniform Circle circles[2];
+// circles[0].radius
+// …
+```
+
+```javascript
+Glsl({
+  ...
+  variable: {
+  	circles: [ new Circle(0.1, 0.1, 0.2), new Circle(0.2, 0.3, 0.2) ]
+  },
+  ...
+}).start();
+```
 
 Using images
 ------------
