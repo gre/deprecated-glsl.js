@@ -24,11 +24,11 @@ By design, **you can't mix logic and render part**, this approach really helps t
 
 Efficiency
 ----
+Today, WebGL is widely supported on modern desktop browsers. It's not yet the case on mobile and tablet.
 
+However, using Chrome Beta, I'm able to run my HTML5 game at 60fps on my Nexus 4, which is quite promising for the future.
 
-Look, I'm able to run my HTML5 game at 60fps on my Nexus 7 tablet (Chrome Beta):
-
-[VIDEO TODO]
+[http://www.youtube.com/watch?v=EzTCdjpdTfk](http://www.youtube.com/watch?v=EzTCdjpdTfk)
 
 
 Hello World Example
@@ -264,7 +264,7 @@ In GLSL, you will need to use the texture lookup functions to access the image c
 
 Using another canvas
 --------------------
-TODO
+This is not possible yet, stay tuned.
 
 
 Licence
