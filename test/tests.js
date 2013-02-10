@@ -35,6 +35,7 @@ test("variable injection", function () {
 "struct Circle { vec2 center; highp float radius; };",
 "struct Player {Circle circle;bool visible;} ;",
 "uniform Circle c1;",
+"uniform Circle c2array[2];",
 "uniform Player p1;",
 "bool test () { return ",
 "  b1==true &&",
@@ -51,6 +52,8 @@ test("variable injection", function () {
 "  farray5[0]==0.4 && farray5[4]==0.8 &&",
 "  v2arr5[0]==vec2(0.5, 0.0) && v2arr5[4]==vec2(4.5, 4) &&",
 "  c1.center==vec2(0.1, 0.2) && c1.radius==0.5 &&",
+"  c2array[0].center==vec2(1.0, 2.0) && c2array[0].radius==3.0 &&",
+"  c2array[1].center==vec2(4.0, 5.0) && c2array[1].radius==6.0 &&",
 "  p1.circle.center==vec2(0.25, 0.25) && p1.circle.radius==0.4 && p1.visible==true &&",
 "true;}",
 "void main (void) {",
@@ -83,7 +86,8 @@ test("variable injection", function () {
         4.5, 4
       ]),
       c1: new Circle(0.1, 0.2, 0.5),
-      p1: new Player(new Circle(0.25, 0.25, 0.4), true)
+      p1: new Player(new Circle(0.25, 0.25, 0.4), true),
+      c2array: [new Circle(1.0, 2.0, 3.0), new Circle(4.0, 5.0, 6.0)]
     }
   });
   glsl.start();
@@ -92,5 +96,6 @@ test("variable injection", function () {
   var c2d = canvas2d.getContext("2d");
   c2d.drawImage(canvas, 0, 0);
   var color = c2d.getImageData(0,0,1,1).data;
+  console.log(color);
   ok(color[0]==0 && color[1]==255 && color[2]==0, "GLSL has received all tested values");
 });

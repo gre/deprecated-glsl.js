@@ -196,7 +196,7 @@
               arrayLength = matches[4];
           var type = typesSuffixMap[nativeType] || nativeType;
           if (arrayLength) {
-            type += "v";
+            type = [type, parseInt(arrayLength, 10)];
           }
           structType[vname] = type;
         }
@@ -213,10 +213,10 @@
         if (matches) {
           var nativeType = matches[2],
               vname = matches[3],
-              arrayLength = matches[4];
+              arrayLength = matches[5];
           var type = typesSuffixMap[nativeType] || nativeType;
           if (arrayLength) {
-            type += "v";
+            type = [type, parseInt(arrayLength, 10)];
           }
           this.uniformTypes[vname] = type;
         }
@@ -233,17 +233,46 @@
         warn("variable '"+name+"' not found in your GLSL.");
         return;
       }
+      var arrayType = type instanceof Array;
+      var arrayLength;
+      if (arrayType) {
+        arrayLength = type[1];
+        type = type[0];
+      }
       var loc = this.locations[varpath];
       if (type in this.structTypes) {
         var structType = this.structTypes[type];
-        for (var field in structType) {
-          var fieldType = structType[field];
-          this.recSyncVariable(field, value[field], fieldType, varpath+"."+field);
+                if (arrayType) {
+          for (var i=0; i<arrayLength; ++i) {
+            var pref = varpath+"["+i+"].";
+            var v = value[i];
+            for (var field in structType) {
+              if (!(field in v)) {
+                warn("variable '"+varpath+"' ("+type+") has no field '"+field+"'");
+                break;
+              }
+              var fieldType = structType[field];
+              this.recSyncVariable(field, v[field], fieldType, pref+field);
+            }
+          }
+        }
+        else {
+          var pref = varpath+".";
+          for (var field in structType) {
+            if (!(field in value)) {
+              warn("variable '"+varpath+"' ("+type+") has no field '"+field+"'");
+              break;
+            }
+            var fieldType = structType[field];
+            this.recSyncVariable(field, value[field], fieldType, pref+field);
+          }
         }
       }
       else {
-        var fn = "uniform"+type;
-        switch (type) {
+        var t = type;
+        if (arrayType) t += "v";
+        var fn = "uniform"+t;
+        switch (t) {
           case "2f":
           case "2i":
             gl[fn].call(gl, loc, value.x, value.y);
@@ -307,10 +336,27 @@
     },
 
     recBindLocations: function (name, type, varpath) {
+      var arrayType = type instanceof Array;
+      var arrayLength;
+      if (arrayType) {
+        arrayLength = type[1];
+        type = type[0];
+      }
       if (type in this.structTypes) {
         var structType = this.structTypes[type];
-        for (var field in structType) {
-          this.recBindLocations(field, structType[field], varpath+"."+field);
+        if (arrayType) {
+          for (var i=0; i<arrayLength; ++i) {
+            var pref = varpath+"["+i+"].";
+            for (var field in structType) {
+              this.recBindLocations(field, structType[field], pref+field);
+            }
+          }
+        }
+        else {
+          var pref = varpath+".";
+          for (var field in structType) {
+            this.recBindLocations(field, structType[field], pref+field);
+          }
         }
       }
       else {
