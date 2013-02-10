@@ -243,7 +243,7 @@
       if (type in this.structTypes) {
         var structType = this.structTypes[type];
                 if (arrayType) {
-          for (var i=0; i<arrayLength; ++i) {
+          for (var i=0; i<arrayLength && i<value.length; ++i) {
             var pref = varpath+"["+i+"].";
             var v = value[i];
             for (var field in structType) {
@@ -289,7 +289,7 @@
             break;
 
           case "sampler2D": 
-            this.syncTexture(gl, loc, value, name); 
+            this.syncTexture(gl, loc, value, varpath); 
             break;
 
           default:
@@ -302,18 +302,22 @@
       }
     },
 
-    syncTexture: function (gl, loc, value, name) {
-      var textureUnit = this.textureUnitForNames[name];
+    syncTexture: function (gl, loc, value, id) {
+      var textureUnit = this.textureUnitForNames[id];
+      if (!textureUnit) {
+        textureUnit = this.allocTexture(id);
+      }
       gl.activeTexture(gl.TEXTURE0 + textureUnit);
       var texture = this.createTexture(value);
       gl.bindTexture(gl.TEXTURE_2D, texture);
       gl.uniform1i(loc, textureUnit);
     },
 
-    allocTexture: function (name) {
+    allocTexture: function (id) {
       var textureUnit = this.textureUnitCounter;
-      this.textureUnitForNames[name] = textureUnit;
+      this.textureUnitForNames[id] = textureUnit;
       this.textureUnitCounter ++;
+      return textureUnit;
     },
 
     createTexture: function (image) {
@@ -407,11 +411,6 @@
       // Init textures
       this.textureUnitForNames = {};
       this.textureUnitCounter = 0;
-      for (var v in this.uniformTypes) {
-        var t = this.uniformTypes[v];
-        if (t == "sampler2D")
-          this.allocTexture(v);
-      }
 
       // buffer
       var texCoordBuffer = gl.createBuffer();
@@ -459,13 +458,13 @@
         lastError = gl.getShaderInfoLog(shader);
         var split = lastError.split(":");
         var col = parseInt(split[1], 10);
-        var line = split[2];
+        var line = parseInt(split[2], 10);
         var s = "";
         if (!isNaN(col)) {
           var spaces = ""; for (var i=0; i<col; ++i) spaces+=" ";
           s = "\n"+spaces+"^";
         }
-        error(lastError+"\n"+shaderSource.split("\n")[line]+s);
+        error(lastError+"\n"+shaderSource.split("\n")[line-1]+s);
         gl.deleteShader(shader);
         throw new Error(shader+" "+lastError);
       }

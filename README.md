@@ -3,7 +3,8 @@
 * [React on the blog article](http://blog.greweb.fr/?p=2130)
 * [Unit tests](http://greweb.fr/glsl.js/test)
 
-[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=greweb&url=http://github.com/gre/glsl.js&title=glsl.js&language=&tags=github&category=software)
+[![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=greweb&url=http://github.com/gre/glsl.js&title=glsl.js&language=&tags=github&category=software) because this is a free and open-source library (Apache 2 licence).
+
 
 glsl.js
 =======
