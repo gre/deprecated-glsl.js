@@ -23,6 +23,8 @@ void main (void) {
 
 <script src="../../glsl.js" type="text/javascript"></script>
 <script type="text/javascript">
+  if (!Glsl.supported()) alert("WebGL is not supported.");
+
   var glsl = Glsl({
     canvas: document.getElementById("viewport"),
     fragment: document.getElementById("fragment").innerHTML,

@@ -93,7 +93,7 @@ limitations under the License.
     this.initGL();
     this.load();
     this.syncAll();
-    options.init && options.init();
+    options.init && options.init.call(this);
     this.update(0, 0);
     this.render();
   };
