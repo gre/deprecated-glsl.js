@@ -55,6 +55,8 @@ limitations under the License.
     else log("ERR "+msg);
   }
 
+  var genid = (function (i) { return function () { return ++i; } })(0);
+
   /** 
    * Creates a new Glsl.
    * @param options
@@ -112,36 +114,44 @@ limitations under the License.
     // ~~~ Public Methods
 
     /**
-     * Starts the render and update loop.
+     * Starts/Continues the render and update loop.
+     * @return the Glsl instance.
      * @public
      */
     start: function () {
-      var startTime = Date.now();
-      var lastTime = 0;
       var self = this;
-      this.running = true;
+      self._stop = false;
+      if (self._running) return self;
+      var id = self._running = genid();
+      var startTime = Date.now();
+      var lastTime = self._stopTime||0;
+      //log("start at "+lastTime);
       requestAnimationFrame(function loop () {
-        if (this.stopRequest) { // handle stop request
-          this.stopRequest = false;
-          this.running = false;
-          return;
+        var t = Date.now()-startTime+(self._stopTime||0);
+        if (self._stop || self._running !== id) { // handle stop request and ensure the last start loop is running
+          //log("stop at "+t);
+          self._running = 0;
+          self._stopTime = t;
         }
-        requestAnimationFrame(loop, self.canvas);
-        var t = Date.now()-startTime;
-        var delta = t-lastTime;
-        lastTime = t;
-        self.update(t, delta);
-        self.render();
+        else {
+          requestAnimationFrame(loop, self.canvas);
+          var delta = t-lastTime;
+          lastTime = t;
+          self.update(t, delta);
+          self.render();
+        }
       }, self.canvas);
-      return this;
+      return self;
     },
 
     /**
-     * Stops the render and update loop.
+     * Pauses the render and update loop.
+     * @return the Glsl instance.
      * @public
      */
     stop: function () {
-      this.stopRequest = true;
+      this._stop = true;
+      return this;
     },
 
     /** 

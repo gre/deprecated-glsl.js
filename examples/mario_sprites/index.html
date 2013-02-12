@@ -112,7 +112,7 @@ Loader.image("mario.png", function (marioSpriteImg) {
     this.size = new Vec2(32, 64);
     this.tile = new Vec2(0, 0);
     this.colorRandom = Math.random();
-    this.speed = 0.3 + 0.05*Math.random() + (Math.random()<0.2 ? Math.random() : 0);
+    this.speed = 0.003 + 0.0005*Math.random() + (Math.random()<0.2 ? 0.01*Math.random() : 0);
   }
 
   var run = [
@@ -141,9 +141,6 @@ Loader.image("mario.png", function (marioSpriteImg) {
     },
     init: function () {
       var self = this;
-      window.addEventListener("resize", function () {
-        canvas.width = window.innerWidth;
-      });
       var w = 32;
       for (var i=0; i<10; ++i) {
         marios.push(new Mario((i/10)*(this.canvas.width+w), 0));
@@ -160,18 +157,35 @@ Loader.image("mario.png", function (marioSpriteImg) {
       }
     },
     update: function (time, delta) {
+      var w = this.canvas.width;
       this.set("time", time);
       for (var i=0; i<marios.length; ++i) {
         var m = marios[i];
-        var t = Math.floor(time / 40*m.speed);
+        var t = Math.floor(time / 0.4*m.speed);
         m.tile = run[t % run.length];
-        var w = this.canvas.width+m.size.x;
-        m.position.x = this.canvas.width + (m.initialPosition.x-time*m.speed) % w;
+        m.position.x -= m.size.x*m.speed*delta;
+        if (m.position.x < -m.size.x) {
+          m.position.x = w;
+        }
       }
       this.set("mariosLength", marios.length);
       this.sync("marios");
     }
   }).start();
+
+  window.addEventListener("resize", function () {
+    canvas.width = window.innerWidth;
+  });
+
+  window.addEventListener('focus', function() {
+    glsl.start();
+  });
+
+  window.addEventListener('blur', function() {
+    glsl.stop();
+  });
+
+  G = glsl;
 
 });
 </script>
