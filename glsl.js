@@ -59,6 +59,8 @@ limitations under the License.
 
   /** 
    * Creates a new Glsl.
+   * init(), update() and render() are called When GL is ready.
+   * 
    * @param options
    * @param {HTMLCanvasElement} options.canvas The Canvas to render.
    * @param {String} options.fragment The fragment shader source code.
@@ -78,6 +80,7 @@ limitations under the License.
     this.canvas = options.canvas;
     this.fragment = options.fragment;
     this.variables = options.variables; // Variable references
+    this.init = options.init || function(t){};
     this.update = options.update || function(t){};
 
     this.parseStructs();
@@ -95,7 +98,7 @@ limitations under the License.
     this.initGL();
     this.load();
     this.syncAll();
-    options.init && options.init.call(this);
+    this.init();
     this.update(0, 0);
     this.render();
   };
@@ -115,6 +118,7 @@ limitations under the License.
 
     /**
      * Starts/Continues the render and update loop.
+     * The call is not mandatory if you need a one time rendering, but don't need to update things through time (rendering is performed once at Glsl instanciation).
      * @return the Glsl instance.
      * @public
      */
@@ -157,6 +161,7 @@ limitations under the License.
     /** 
      * Synchronizes variables from the Javascript into the GLSL.
      * @param {String} variableNames* all variables to synchronize.
+     * @return the Glsl instance.
      * @public
      */
     sync: function (/*var1, var2, ...*/) {
@@ -164,15 +169,18 @@ limitations under the License.
         var v = arguments[i];
         this.syncVariable(v);
       }
+      return this;
     },
 
     /** 
      * Synchronizes all variables.
      * Prefer using sync for a deeper optimization.
+     * @return the Glsl instance.
      * @public
      */
     syncAll: function () {
       for (var v in this.variables) this.syncVariable(v);
+      return this;
     },
 
     /**
@@ -180,11 +188,13 @@ limitations under the License.
      *
      * @param {String} vname the variable name to set and synchronize.
      * @param {Any} vvalue the value to set.
+     * @return the Glsl instance.
      * @public
      */
     set: function (vname, vvalue) {
       this.variables[vname] = vvalue;
       this.sync(vname);
+      return this;
     },
 
     // ~~~ Going Private Now
