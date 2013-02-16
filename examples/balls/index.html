@@ -40,6 +40,8 @@
 <script type="text/javascript" src="../../glsl.js"></script>
 
 <script type="text/javascript">
+  if (!Glsl.supported()) alert("WebGL is not supported.");
+
   function Vec2 (x, y) {
     this.x = x;
     this.y = y;

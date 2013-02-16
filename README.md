@@ -1,6 +1,7 @@
 
 * [Read the blog article](http://blog.greweb.fr/?p=2130)
 * [Open Examples](http://greweb.fr/glsl.js/examples)
+* [Watch the beginner video tutorial](http://www.youtube.com/watch?v=kxBkfy_8JEs)
 * [API Documentation](http://greweb.fr/glsl.js/docs)
 * [Unit tests](http://greweb.fr/glsl.js/test)
 
