@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+
+<canvas id="game" width="600" height="400"></canvas>
+
+<script id="fragment" type="x-shader/x-fragment">
+  precision mediump float;
+  uniform vec2 resolution;
+  uniform float time;
+
+  struct Ball {
+    vec2 center;
+    float radius;
+  };
+
+  uniform Ball balls[10];
+  uniform int ballsLength;
+
+  bool inCircle (vec2 p, vec2 center, float radius) {
+    vec2 ratio = resolution.xy / resolution.x;
+    return distance(p*ratio, center*ratio) < radius;
+  }
+
+  bool inBall(vec2 p, Ball b) {
+    return inCircle(p, b.center, b.radius);
+  }
+
+  void main () {
+    vec2 p = gl_FragCoord.xy / resolution.xy;
+    float z = 0.5+0.5*smoothstep(-1.0, 1.0, cos(time * 0.005));
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+    for (int i=0; i<10; ++i) { if (i>=ballsLength) break;
+      if (inBall(p, balls[i])) {
+        gl_FragColor = vec4(p.x, p.y, z, 1.0);
+      }
+    }
+  }
+</script>
+
+<script type="text/javascript" src="../../glsl.js"></script>
+
+<script type="text/javascript">
+  function Vec2 (x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  function Ball (center, radius, velocity) {
+    this.center = center;
+    this.radius = radius;
+    this.velocity = velocity;
+  }
+
+  Ball.prototype.update = function (time, delta) {
+    this.center.x = this.center.x + this.velocity.x * delta;
+    this.center.y = this.center.y + this.velocity.y * delta;
+    if (this.center.y < 0) {
+      this.center.y = 0;
+      this.velocity.y *= -1;
+    }
+    if (this.center.x < 0) {
+      this.center.x = 0;
+      this.velocity.x *= -1;
+    }
+    if (this.center.y > 1) {
+      this.center.y = 1;
+      this.velocity.y *= -1;
+    }
+    if (this.center.x > 1) {
+      this.center.x = 1;
+      this.velocity.x *= -1;
+    }
+  }
+
+  Glsl({
+    canvas: document.getElementById("game"),
+    fragment: document.getElementById("fragment").innerHTML,
+    variables: {
+      time: 0,
+      balls: [],
+      ballsLength: 0
+    },
+  init: function () {
+    for (var i = 0; i<10; ++i) {
+      this.variables.balls.push(new Ball(new Vec2(Math.random(), Math.random()), 0.01+0.01*Math.random(), new Vec2(0.001*Math.random(), 0.001*Math.random())));
+    }
+  },
+    update: function (time, delta) {
+      this.set("time", time);
+      this.variables.balls.forEach(function (ball) {
+        ball.update(time, delta);
+      });
+      this.set("ballsLength", this.variables.balls.length);
+      this.sync("balls");
+    }
+  }).start();
+</script>
+
