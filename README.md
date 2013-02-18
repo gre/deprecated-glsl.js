@@ -1,9 +1,10 @@
-
 * [Read the blog article](http://blog.greweb.fr/?p=2130)
 * [Open Examples](http://greweb.fr/glsl.js/examples)
-* [Watch the beginner video tutorial](http://www.youtube.com/watch?v=kxBkfy_8JEs)
 * [API Documentation](http://greweb.fr/glsl.js/docs)
 * [Unit tests](http://greweb.fr/glsl.js/test)
+
+* [Watch the beginner video tutorial](http://www.youtube.com/watch?v=kxBkfy_8JEs)
+[![](https://f.cloud.github.com/assets/211411/167278/cb4897c4-79cd-11e2-878a-b58f349ffc1a.jpg)](http://www.youtube.com/watch?v=kxBkfy_8JEs)
 
 [![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=greweb&url=http://github.com/gre/glsl.js&title=glsl.js&language=&tags=github&category=software) because this is a free and open-source library (Apache 2 licence).
 
