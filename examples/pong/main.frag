@@ -2,6 +2,8 @@
 precision mediump float;
 #endif
 
+#define MAX_BALLS 10
+
 struct Player {
   vec2 position;
   vec2 dimension;
@@ -23,8 +25,7 @@ uniform vec2 resolution;
 uniform float time;
 uniform float lastBallFail;
 
-const int MAX_BALLS = 10;
-uniform Ball balls[10];
+uniform Ball balls[MAX_BALLS];
 uniform int ballsLength;
 
 uniform Player player;

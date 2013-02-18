@@ -19,15 +19,20 @@
 #ifdef GL_ES
 precision mediump float;
 #endif
-uniform float time;
-uniform vec2 resolution;
 
-// Spritesheets
+#define MAX_MARIOS 20
+
 struct ConstantSpritesheet {
   vec2 size; // size of img in pixels
   vec2 tileSize; // size of one tile in pixels
 };
 
+uniform vec2 resolution;
+uniform float time;
+uniform ConstantSpritesheet marioSpriteInfos;
+uniform sampler2D marioSpriteSampler; // sprite image
+
+// Spritesheets
 const vec2 _reverseYpos = vec2(0.0, 1.0);
 const mat2 _reverseY = mat2( 1, 0, 0, -1 );
 vec2 reverseY (vec2 p) { return p*_reverseY+_reverseYpos; }
@@ -51,8 +56,6 @@ vec4 drawSprite (vec2 p, ConstantSpritesheet s, sampler2D img, ivec2 tile, vec2 
 }
 
 // ~~~
-uniform ConstantSpritesheet marioSpriteInfos;
-uniform sampler2D marioSpriteSampler; // sprite image
 
 struct Mario {
   vec2 position; // in pixels
@@ -61,8 +64,7 @@ struct Mario {
   float colorRandom;
 };
 
-const int MAX_MARIOS = 20;
-uniform Mario marios[20];
+uniform Mario marios[MAX_MARIOS];
 uniform int mariosLength;
 
 
@@ -129,7 +131,7 @@ Loader.image("mario.png", function (marioSpriteImg) {
 
   var glsl = Glsl({
     canvas: canvas,
-    fragment: document.getElementById("fragment").innerHTML,
+    fragment: document.getElementById("fragment").textContent,
     variables: {
       marioSpriteSampler: marioSpriteImg,
       marioSpriteInfos: {

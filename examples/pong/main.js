@@ -221,7 +221,7 @@ Loader.text("main.frag",
 
     var ballAddFrequency = 7000;
 
-    var MAX_BALLS = 10;
+    var MAX_BALLS;
     var lastBallAdded = 0;
 
     var glsl = Glsl({
@@ -236,6 +236,7 @@ Loader.text("main.frag",
         time: 0
       },
       init: function () {
+        MAX_BALLS = this.defines.MAX_BALLS;
         player.obtainBall(addBall());
       },
       update: function (t, delta) {

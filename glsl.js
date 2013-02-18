@@ -36,11 +36,12 @@ limitations under the License.
     "mat4": "Matrix4fv"
   };
 
-  var rUniform = /uniform\s+([a-z]+\s+)?([A-Za-z0-9]+)\s+([a-zA-Z_0-9]+)\s*(\[([0-9]+)\])?/;
+  var rUniform = /uniform\s+([a-z]+\s+)?([A-Za-z0-9]+)\s+([a-zA-Z_0-9]+)\s*(\[\s*(.+)\s*\])?/;
   var rStruct = /struct\s+\w+\s*{[^}]+}\s*;/g;
   var rStructExtract = /struct\s+(\w+)\s*{([^}]+)}\s*;/;
   var rStructFields = /[^;]+;/g;
-  var rStructField = /\s*([a-z]+\s+)?([A-Za-z0-9]+)\s+([a-zA-Z_0-9]+)\s*(\[([0-9]+)\])?\s*;/;
+  var rStructField = /\s*([a-z]+\s+)?([A-Za-z0-9]+)\s+([a-zA-Z_0-9]+)\s*(\[\s*(.+)\s*\])?\s*;/;
+  var rDefine = /#define\s+([a-zA-Z_0-9]+)\s+(.*)/;
 
   var Lprefix = "Glsl: ";
   function log (msg) {
@@ -83,6 +84,7 @@ limitations under the License.
     this.init = options.init || function(t){};
     this.update = options.update || function(t){};
 
+    this.parseDefines();
     this.parseStructs();
     this.parseUniforms();
 
@@ -113,6 +115,14 @@ limitations under the License.
   };
 
   Glsl.prototype = {
+
+    /**
+     * A map containing all the #define declarations of the GLSL.
+     *
+     * You can use it to synchronize some constants between GLSL and Javascript (like an array capacity).
+     * @public
+     */
+    defines: null,
 
     // ~~~ Public Methods
 
@@ -215,6 +225,19 @@ limitations under the License.
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
     },
 
+    parseDefines: function () {
+      this.defines = {};
+      var lines = this.fragment.split("\n");
+      for (var l=0; l<lines.length; ++l) {
+        var matches = lines[l].match(rDefine);
+        if (matches && matches.length==3) {
+          var dname = matches[1],
+              dvalue = matches[2];
+          this.defines[dname] = dvalue;
+        }
+      }
+    },
+
     parseStructs: function () {
       this.structTypes = {};
       var structs = this.fragment.match(rStruct);
@@ -234,6 +257,7 @@ limitations under the License.
               arrayLength = matches[4];
           var type = typesSuffixMap[nativeType] || nativeType;
           if (arrayLength) {
+            if (arrayLength in this.defines) arrayLength = this.defines[arrayLength];
             type = [type, parseInt(arrayLength, 10)];
           }
           structType[vname] = type;
@@ -254,6 +278,7 @@ limitations under the License.
               arrayLength = matches[5];
           var type = typesSuffixMap[nativeType] || nativeType;
           if (arrayLength) {
+            if (arrayLength in this.defines) arrayLength = this.defines[arrayLength];
             type = [type, parseInt(arrayLength, 10)];
           }
           this.uniformTypes[vname] = type;
