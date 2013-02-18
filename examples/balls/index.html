@@ -1,6 +1,25 @@
 <!DOCTYPE html>
 
-<canvas id="game" width="600" height="400"></canvas>
+<link href='http://fonts.googleapis.com/css?family=Fjalla+One' rel='stylesheet' type='text/css'>
+
+<style type="text/css">
+  body, html {
+    font-family: "Fjalla One";
+  }
+  a {
+    color: #000;
+  }
+  #wrapper {
+    margin: 0 auto;
+    width: 640px;
+  }
+</style>
+
+<div id="wrapper">
+
+<h1>Bouncing balls with <a href="http://github.com/gre/glsl.js">glsl.js</a> ...</h1>
+
+<canvas id="game" width="640" height="400"></canvas>
 
 <script id="fragment" type="x-shader/x-fragment">
   precision mediump float;
@@ -98,3 +117,11 @@
   }).start();
 </script>
 
+<h2>... made in 20 minutes during this video:</h2>
+<iframe width="640" height="480" src="http://www.youtube.com/embed/kxBkfy_8JEs" frameborder="0" allowfullscreen></iframe>
+<p>React on <a href="http://blog.greweb.fr/?p=2163">http://blog.greweb.fr/?p=2163</a></p>
+<h2>Source code</h2>
+<script src="https://gist.github.com/gre/4976345.js"></script>
+<a href="..">Back to more examples</a>
+
+</div>
