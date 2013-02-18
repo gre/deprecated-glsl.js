@@ -23,7 +23,6 @@ uniform vec2 resolution;
 
 // Spritesheets
 struct ConstantSpritesheet {
-  sampler2D img; // sprite image
   vec2 size; // size of img in pixels
   vec2 tileSize; // size of one tile in pixels
 };
@@ -32,7 +31,7 @@ const vec2 _reverseYpos = vec2(0.0, 1.0);
 const mat2 _reverseY = mat2( 1, 0, 0, -1 );
 vec2 reverseY (vec2 p) { return p*_reverseY+_reverseYpos; }
 
-vec4 drawSprite (vec2 p, ConstantSpritesheet s, ivec2 tile, vec2 pos, vec2 size) {
+vec4 drawSprite (vec2 p, ConstantSpritesheet s, sampler2D img, ivec2 tile, vec2 pos, vec2 size) {
   vec2 absP = p*resolution.xy;
   bool inSprite = all(lessThan(pos, absP)) && all(lessThan(absP, pos+size));
   if (inSprite) {
@@ -40,18 +39,19 @@ vec4 drawSprite (vec2 p, ConstantSpritesheet s, ivec2 tile, vec2 pos, vec2 size)
     vec2 tilePosition = vec2(tile)*tileRatio;
     p -= pos/resolution.xy;
     p /= size/resolution.xy;
-    return texture2D(s.img, reverseY(p)*tileRatio+tilePosition);
+    return texture2D(img, reverseY(p)*tileRatio+tilePosition);
   }
   else {
     return vec4(0.0, 0.0, 0.0, 0.0);
   }
 }
-vec4 drawSprite (vec2 p, ConstantSpritesheet s, ivec2 tile, vec2 pos) {
-  return drawSprite(p, s, tile, pos, s.tileSize);
+vec4 drawSprite (vec2 p, ConstantSpritesheet s, sampler2D img, ivec2 tile, vec2 pos) {
+  return drawSprite(p, s, img, tile, pos, s.tileSize);
 }
 
 // ~~~
-uniform ConstantSpritesheet marioSprite;
+uniform ConstantSpritesheet marioSpriteInfos;
+uniform sampler2D marioSpriteSampler; // sprite image
 
 struct Mario {
   vec2 position; // in pixels
@@ -79,7 +79,7 @@ void main (void) {
   for (int i=0; i<MAX_MARIOS; i++) { if (i>=mariosLength) break;
     Mario m = marios[i];
     vec2 absP = p*resolution.xy;
-    vec4 c = drawSprite(p, marioSprite, ivec2(m.tile), m.position, m.size);
+    vec4 c = drawSprite(p, marioSpriteInfos, marioSpriteSampler, ivec2(m.tile), m.position, m.size);
     c.rgb += 0.3*vec3(m.colorRandom, 1.0-m.colorRandom, 0.0);
     gl_FragColor = vec4(mix(gl_FragColor.rgb, c.rgb, c.a), 1.0);
   }
@@ -130,8 +130,8 @@ Loader.image("mario.png", function (marioSpriteImg) {
     canvas: canvas,
     fragment: document.getElementById("fragment").innerHTML,
     variables: {
-      marioSprite: {
-        img: marioSpriteImg,
+      marioSpriteSampler: marioSpriteImg,
+      marioSpriteInfos: {
         size: new Vec2(256,192),
         tileSize: new Vec2(32,64)
       },
