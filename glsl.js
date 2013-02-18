@@ -68,6 +68,7 @@ limitations under the License.
    * @param {Object} options.variables The variables map (initial values).
    * @param {Function} [options.update] The update function to call each frame. (the relative time from the start() and the time since the last update) in milliseconds is given to the function.
    * @param {Function} [options.init] Call once when GL is initialized.
+   * @param {Function} [options.ready] Call after the first render has been achieved.
    *
    * @namespace
    */
@@ -83,6 +84,7 @@ limitations under the License.
     this.variables = options.variables; // Variable references
     this.init = options.init || function(t){};
     this.update = options.update || function(t){};
+    this.ready = options.ready || function(t){};
 
     this.parseDefines();
     this.parseStructs();
@@ -103,6 +105,7 @@ limitations under the License.
     this.init();
     this.update(0, 0);
     this.render();
+    this.ready();
   };
 
   /**

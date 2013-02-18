@@ -145,31 +145,32 @@ asyncTest("variable injection", function () {
         p1: new Player(new Circle(0.25, 0.25, 0.4), true),
         c2array: [new Circle(1.0, 2.0, 3.0), new Circle(4.0, 5.0, 6.0)],
         yellow16x16: yellow16x16
+      },
+      ready: function () {
+        var color = getFirstPixelColor(canvas);
+        var r = color[0], g = color[1], b = color[2];
+        ok(b!=1, "b1");
+        ok(b!=2, "b2");
+        ok(b!=3, "i1");
+        ok(b!=4, "i2");
+        ok(b!=5, "f1");
+        ok(b!=6, "v2");
+        ok(b!=7, "v3");
+        ok(b!=8, "v4");
+        ok(b!=9, "iv2");
+        ok(b!=10, "barray4");
+        ok(b!=11, "iarray4");
+        ok(b!=12, "farray5");
+        ok(b!=13, "v2arr5");
+        ok(b!=14, "c1");
+        ok(b!=15, "c2array[0]");
+        ok(b!=16, "c2array[1]");
+        ok(b!=17, "p1");
+        ok(b!=18, "yellow16x16");
+        ok(r==0 && g==255 && b==0, "All GLSL tests passed. ("+r+","+g+","+b+")");
+        start();
       }
     });
-    var color = getFirstPixelColor(canvas);
-    console.log(color);
-    var r = color[0], g = color[1], b = color[2];
-    ok(b!=1, "b1");
-    ok(b!=2, "b2");
-    ok(b!=3, "i1");
-    ok(b!=4, "i2");
-    ok(b!=5, "f1");
-    ok(b!=6, "v2");
-    ok(b!=7, "v3");
-    ok(b!=8, "v4");
-    ok(b!=9, "iv2");
-    ok(b!=10, "barray4");
-    ok(b!=11, "iarray4");
-    ok(b!=12, "farray5");
-    ok(b!=13, "v2arr5");
-    ok(b!=14, "c1");
-    ok(b!=15, "c2array[0]");
-    ok(b!=16, "c2array[1]");
-    ok(b!=17, "p1");
-    ok(b!=18, "yellow16x16");
-    ok(r==0 && g==255 && b==0, "All GLSL tests passed.");
-    start();
   }
   yellow16x16.onload = onload;
   yellow16x16.src = "yellow16x16.png";
