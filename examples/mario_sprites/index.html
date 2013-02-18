@@ -5,6 +5,7 @@
   <title>Mario sprites</title>
   <style type="text/css">
     html, body {
+      background: black;
       padding: 0;
       margin: 0;
     }
@@ -179,10 +180,12 @@ Loader.image("mario.png", function (marioSpriteImg) {
 
   window.addEventListener('focus', function() {
     glsl.start();
+    canvas.style.opacity = 1.0;
   });
 
   window.addEventListener('blur', function() {
     glsl.stop();
+    canvas.style.opacity = 0.5;
   });
 
   G = glsl;
