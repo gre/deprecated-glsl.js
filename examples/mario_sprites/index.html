@@ -33,10 +33,6 @@ uniform ConstantSpritesheet marioSpriteInfos;
 uniform sampler2D marioSpriteSampler; // sprite image
 
 // Spritesheets
-const vec2 _reverseYpos = vec2(0.0, 1.0);
-const mat2 _reverseY = mat2( 1, 0, 0, -1 );
-vec2 reverseY (vec2 p) { return p*_reverseY+_reverseYpos; }
-
 vec4 drawSprite (vec2 p, ConstantSpritesheet s, sampler2D img, ivec2 tile, vec2 pos, vec2 size) {
   vec2 absP = p*resolution.xy;
   bool inSprite = all(lessThan(pos, absP)) && all(lessThan(absP, pos+size));
@@ -45,7 +41,7 @@ vec4 drawSprite (vec2 p, ConstantSpritesheet s, sampler2D img, ivec2 tile, vec2 
     vec2 tilePosition = vec2(tile)*tileRatio;
     p -= pos/resolution.xy;
     p /= size/resolution.xy;
-    return texture2D(img, reverseY(p)*tileRatio+tilePosition);
+    return texture2D(img, p*tileRatio+tilePosition);
   }
   else {
     return vec4(0.0, 0.0, 0.0, 0.0);
