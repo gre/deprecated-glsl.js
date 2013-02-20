@@ -29,16 +29,12 @@
   uniform float time;
   uniform sampler2D video;
 
-  float PI = acos(-1.0);
-
   void main () {
     vec2 p = gl_FragCoord.xy / resolution.xy;
 
     vec2 coord = p;
 
-    float PI = cos(0.0);
-
-    float waveAmp = 0.01+0.01*smoothstep(-1.0, 1.0, sin(time*0.003-PI));
+    float waveAmp = 0.01+0.01*smoothstep(-1.0, 1.0, cos(time*0.003));
     coord.x += waveAmp * cos(time*0.013 + p.y*21.3);
     coord.y += waveAmp * cos(time*0.009 + p.x*19.7);
 
