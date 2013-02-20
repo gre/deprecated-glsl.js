@@ -60,11 +60,11 @@
 
   var video = document.getElementById("video");
 
-  video.crossOrigin="Anonymous";
-
-  video.addEventListener("canplaythrough", function () {
+  var glsl;
+  video.addEventListener("canplay", function () {
+    if (glsl) return;
     document.getElementById("loading").style.display = "none";
-    var glsl = Glsl({
+    glsl = Glsl({
       canvas: document.getElementById("viewport"),
         fragment: document.getElementById("fragment").textContent,
         variables: {
