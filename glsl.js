@@ -91,10 +91,9 @@ limitations under the License.
     this.parseUniforms();
 
     if (!this.uniformTypes.resolution) throw new Error("Glsl: You must use a 'vec2 resolution' in your shader.");
-    delete this.uniformTypes.resolution; // We don't bind it naturally
 
     for (var v in this.uniformTypes) {
-      if (!(v in this.variables)) {
+      if (!(v in this.variables) && v!="resolution") {
         warn("variable '"+v+"' not initialized");
       }
     }
@@ -208,6 +207,16 @@ limitations under the License.
       this.variables[vname] = vvalue;
       this.sync(vname);
       return this;
+    },
+
+    /**
+     * Resize the canvas with a new width and height.
+     * @public
+     */
+    setSize: function (width, height) {
+      this.canvas.width = width;
+      this.canvas.height = height;
+      this.syncResolution();
     },
 
     // ~~~ Going Private Now
@@ -443,7 +452,7 @@ limitations under the License.
       var gl = this.gl;
       var w = this.canvas.width, h = this.canvas.height;
       gl.viewport(0, 0, w, h);
-      var resolutionLocation = gl.getUniformLocation(this.program, "resolution");
+      var resolutionLocation = this.locations.resolution;
       gl.uniform2f(resolutionLocation, w, h);
       var x1 = 0, y1 = 0, x2 = w, y2 = h;
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
@@ -467,10 +476,17 @@ limitations under the License.
 
       // Create new program
       this.program = this.loadProgram([
-          this.loadShader('attribute vec2 position;attribute vec2 texCoord_in;uniform vec2 resolution;varying vec2 texCoord;void main() {vec2 zeroToOne = position / resolution;vec2 zeroToTwo = zeroToOne * 2.0;vec2 clipSpace = zeroToTwo - 1.0;gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);texCoord = texCoord_in;}', gl.VERTEX_SHADER), 
-          this.loadShader(this.fragment, gl.FRAGMENT_SHADER)
-          ]);
+        this.loadShader('attribute vec2 position; void main() { gl_Position = vec4(2.0*position-1.0, 0.0, 1.0);}', gl.VERTEX_SHADER), 
+        this.loadShader(this.fragment, gl.FRAGMENT_SHADER)
+      ]);
       gl.useProgram(this.program);
+
+      /*
+      var nbUniforms = gl.getProgramParameter(this.program, gl.ACTIVE_UNIFORMS);
+      for (var i=0; i<nbUniforms; ++i) {
+        console.log(this.gl.getActiveUniform(this.program, i));
+      }
+      */
 
       // Bind custom variables
       this.initUniformLocations();
@@ -478,16 +494,6 @@ limitations under the License.
       // Init textures
       this.textureUnitForNames = {};
       this.textureUnitCounter = 0;
-
-      // buffer
-      var texCoordBuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0, 1.0, 1.0]), gl.STATIC_DRAW);
-
-      // texCoord
-      var texCoordLocation = gl.getAttribLocation(this.program, "texCoord_in");
-      gl.enableVertexAttribArray(texCoordLocation);
-      gl.vertexAttribPointer(texCoordLocation, 2, gl.FLOAT, false, 0, 0);
 
       // position
       var buffer = gl.createBuffer();

@@ -173,7 +173,7 @@ Loader.image("mario.png", function (marioSpriteImg) {
   }).start();
 
   window.addEventListener("resize", function () {
-    canvas.width = window.innerWidth;
+    glsl.setSize(window.innerWidth, canvas.height);
   });
 
   window.addEventListener('focus', function() {
