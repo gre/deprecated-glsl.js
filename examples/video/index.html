@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+
+<h2>WebGL video demo</h2>
+
+<p><strong>This example is trivial, you can do whatever effect you want :)</strong> <em>View Page Source</em> to see how it works. Or <a href="..">go back</a> to other <strong>glsl.js</strong> examples...</p>
+
+<div id="loading">
+  Video is loading...
+</div>
+<canvas id="viewport" width="640" height="368"></canvas>
+
+<h2>It uses this &lt;video&gt; :</h2>
+
+<video id="video" loop>
+  Your browser does not support the video tag. :(
+  <source src="hammock.webm" type="video/vp8" /> 
+  <source src="hammock.mp4" type="video/mp4" /> 
+  <source src="hammock.ogv" type="video/ogg" />   
+</video>
+
+<p>
+  This video is from <a href="http://studio.html5rocks.com/#PiP">http://studio.html5rocks.com/#PiP</a>.
+</p>
+
+<script id="fragment" type="x-shader/x-fragment">
+  precision mediump float;
+  uniform vec2 resolution;
+  uniform float time;
+  uniform sampler2D video;
+
+  float PI = acos(-1.0);
+
+  void main () {
+    vec2 p = gl_FragCoord.xy / resolution.xy;
+
+    vec2 coord = p;
+
+    float PI = cos(0.0);
+
+    float waveAmp = 0.01+0.01*smoothstep(-1.0, 1.0, sin(time*0.003-PI));
+    coord.x += waveAmp * cos(time*0.013 + p.y*21.3);
+    coord.y += waveAmp * cos(time*0.009 + p.x*19.7);
+
+    vec4 t = texture2D(video, coord);
+
+    vec3 c = clamp(
+      t.rgb,
+      vec3(distance(p, vec2(0.5, 0.5))*(1.0+cos(time*0.01)), 0.0, 0.0), // min color
+      vec3(1.0, 1.0, 0.6+0.4*cos(time*0.001)) // max color
+    );
+
+    gl_FragColor = vec4(c, 1.0);
+  }
+</script>
+
+<script type="text/javascript" src="../../glsl.js"></script>
+
+<script type="text/javascript">
+  if (!Glsl.supported()) alert("WebGL is not supported.");
+
+  var video = document.getElementById("video");
+
+  video.crossOrigin="Anonymous";
+
+  video.addEventListener("canplaythrough", function () {
+    document.getElementById("loading").style.display = "none";
+    var glsl = Glsl({
+      canvas: document.getElementById("viewport"),
+        fragment: document.getElementById("fragment").textContent,
+        variables: {
+          time: 0,
+        video: video
+        },
+        update: function (time, delta) {
+          this.set("time", time);
+          this.sync("video");
+        }
+    });
+    glsl.start();
+    video.play();
+  });
+
+  video.load();
+</script>
