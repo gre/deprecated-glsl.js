@@ -9,7 +9,7 @@
 <h2>WebGL text demo</h2>
 
 <p>
-  <input id="text" type="text" value="Hello world!" autofocus style="width: 590px; border: 1px solid #000; padding: 2px 4px; font-size: 2em; text-align: center" />
+  <input id="text" type="text" value="Hello world!" autofocus style="width: 590px; border: 2px solid #000; padding: 2px 3px; font-size: 2em; text-align: center" />
 </p>
 
 <canvas id="viewport" width="600" height="400"></canvas>
@@ -48,6 +48,9 @@
 
   var textCanvas = document.getElementById("textCanvas");
   var text = document.getElementById("text");
+
+  if (location.hash && location.hash.length>1)
+    text.value = location.hash.substring(1);
 
   var renderText = (function (ctx) {
     return function() {
