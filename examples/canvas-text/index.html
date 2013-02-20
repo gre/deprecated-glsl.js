@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+
+<style type="text/css">
+  canvas {
+    background: url("alpha_mask.png") repeat;
+  }
+</style>
+
+<h2>WebGL text demo</h2>
+
+<p>
+  <input id="text" type="text" value="Hello world!" autofocus style="width: 590px; border: 1px solid #000; padding: 2px 4px; font-size: 2em; text-align: center" />
+</p>
+
+<canvas id="viewport" width="600" height="400"></canvas>
+
+<h2>using a Canvas 2D</h2>
+
+<canvas id="textCanvas" width="1200" height="250" style="width: 600px"></canvas>
+
+<script id="fragment" type="x-shader/x-fragment">
+  precision mediump float;
+  uniform vec2 resolution;
+  uniform float time;
+  uniform sampler2D text;
+
+  void main () {
+    vec2 p = gl_FragCoord.xy / resolution.xy;
+
+    vec3 bg = vec3(p.x*0.5, p.y*0.5, 0.2);
+
+    float waveAmp = 0.01+0.10*(1.0 + sin(time*0.001));
+    float waveSpeed = time*0.01;
+    float waveMag = 20.0 + 15.*cos(3.+time*0.000111);
+    vec2 coord = p*vec2(1.0, 2.)-vec2(0.0, 0.5)+vec2(0., waveAmp*sin(waveSpeed+p.x*waveMag));
+
+    vec3 textColor = vec3(p.x, 0.7+0.3*cos(0.01*time), 0.7+0.3*sin(0.01*time));
+    vec4 t = texture2D(text, coord);
+    vec3 c = mix(bg, textColor*t.rgb, t.a);
+    gl_FragColor = vec4(c, 1.0);
+  }
+</script>
+
+<script type="text/javascript" src="../../glsl.js"></script>
+
+<script type="text/javascript">
+  if (!Glsl.supported()) alert("WebGL is not supported.");
+
+  var textCanvas = document.getElementById("textCanvas");
+  var text = document.getElementById("text");
+
+  var renderText = (function (ctx) {
+    return function() {
+      ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+      ctx.font = "bold 160px Helvetica";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#fff";
+      ctx.fillText(text.value, ctx.canvas.width/2, ctx.canvas.height/2);
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.strokeText(text.value, ctx.canvas.width/2, ctx.canvas.height/2);
+    }
+  })(textCanvas.getContext("2d"));
+
+  renderText();
+
+  var glsl = Glsl({
+    canvas: document.getElementById("viewport"),
+    fragment: document.getElementById("fragment").textContent,
+    variables: {
+      time: 0,
+      text: textCanvas
+    },
+    update: function (time, delta) {
+      this.set("time", time);
+    }
+  });
+
+  text.addEventListener("keyup", function () {
+    renderText();
+    glsl.sync("text");
+  }, false);
+  
+  glsl.start();
+
+</script>
