@@ -6,6 +6,7 @@
 
 <div id="loading">
   Video is loading...
+  If it doesn't load, <a href="javascript: playVideo()">click here</a>.
 </div>
 <canvas id="viewport" width="640" height="368"></canvas>
 
@@ -61,7 +62,7 @@
   var video = document.getElementById("video");
 
   var glsl;
-  video.addEventListener("canplay", function () {
+  video.addEventListener("play", function () {
     if (glsl) return;
     document.getElementById("loading").style.display = "none";
     glsl = Glsl({
@@ -77,7 +78,14 @@
         }
     });
     glsl.start();
+  });
+
+  function playVideo () {
     video.play();
+  }
+
+  video.addEventListener("canplaythrough", function () {
+    playVideo();
   });
 
   video.load();
