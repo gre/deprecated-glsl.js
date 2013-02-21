@@ -12,7 +12,7 @@
 
 <h2>It uses this &lt;video&gt; :</h2>
 
-<video id="video" loop>
+<video id="video" loop controls>
   Your browser does not support the video tag. :(
   <source src="hammock.webm" type="video/vp8" /> 
   <source src="hammock.mp4" type="video/mp4" /> 
@@ -56,8 +56,16 @@
   if (!Glsl.supported()) alert("WebGL is not supported.");
 
   var video = document.getElementById("video");
-
   var glsl;
+
+  function playVideo () {
+    video.play();
+  }
+
+  video.addEventListener("canplaythrough", function () {
+    playVideo();
+  });
+
   video.addEventListener("play", function () {
     if (glsl) return;
     document.getElementById("loading").style.display = "none";
@@ -74,14 +82,12 @@
         }
     });
     glsl.start();
-  });
-
-  function playVideo () {
-    video.play();
-  }
-
-  video.addEventListener("canplaythrough", function () {
-    playVideo();
+    video.addEventListener("play", function () {
+      glsl.start();
+    });
+    video.addEventListener("pause", function () {
+      glsl.stop();
+    });
   });
 
   video.load();

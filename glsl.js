@@ -382,10 +382,25 @@ limitations under the License.
       if (!textureUnit) {
         textureUnit = this.allocTexture(id);
       }
+
       gl.activeTexture(gl.TEXTURE0 + textureUnit);
-      var texture = this.createTexture(value);
+
+      var texture;
+      texture = this.textureForTextureUnit[textureUnit];
+      if (texture) {
+        gl.deleteTexture(texture);
+      }
+
+      texture = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, value);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.uniform1i(loc, textureUnit);
+      this.textureForTextureUnit[textureUnit] = texture;
     },
 
     allocTexture: function (id) {
@@ -393,20 +408,6 @@ limitations under the License.
       this.textureUnitForNames[id] = textureUnit;
       this.textureUnitCounter ++;
       return textureUnit;
-    },
-
-    createTexture: function (image) {
-      var gl = this.gl;
-      var texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, texture);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-      return texture;
     },
 
     initUniformLocations: function () {
@@ -493,6 +494,7 @@ limitations under the License.
 
       // Init textures
       this.textureUnitForNames = {};
+      this.textureForTextureUnit = {};
       this.textureUnitCounter = 0;
 
       // position
