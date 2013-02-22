@@ -67,7 +67,11 @@
     vec4 t = texture2D(game, coord);
 
     vec3 c = t.rgb - smoothstep(0.1, 1.8, dist);
-    //*rand(p+time*0.001)*(0.1+3.*amp);
+
+    if (time < 1000.) {
+      c += smoothstep(1000., 0., time);
+    }
+
     gl_FragColor = vec4(c, 1.0);
   }
 </script>
@@ -116,13 +120,15 @@
     function drawBg () {
       ctx.fillStyle = "#AD9";
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.globalAlpha = 0.2 - Math.min(0.2, 0.08 * Math.log(1+appleEaten));
+      ctx.fillStyle = "#000";
       for (var x=CELL_W; x<WIDTH; x += CELL_W) {
         ctx.fillRect(x, 0, 1, HEIGHT);
       }
       for (var y=CELL_H; y<HEIGHT; y += CELL_H) {
         ctx.fillRect(0, y, WIDTH, 1);
       }
+      ctx.globalAlpha = 1;
     }
 
     function drawCell (x, y, type) {
@@ -224,6 +230,7 @@
     var lastApple = 0;
     var lastMove = 0;
     function update (time, delta) {
+      if (time < 1000) return false; // wait 1 second
       if (time - lastMove < refreshRate) return false;
       lastMove = time;
 
