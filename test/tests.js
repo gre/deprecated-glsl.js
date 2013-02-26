@@ -273,3 +273,55 @@ asyncTest("variables set & sync", function () {
     }).start().start().start().start(); // stressing start a bit
 
 });
+
+
+asyncTest("canvas as a texture is working and can be re-sync", 2, function () {
+  var c = document.createElement("canvas");
+  var ctx = c.getContext("2d");
+
+  var D = 200;
+  var S = [];
+
+  // only fill the left-right part to test if axis are not inverted (especially Y)
+  function setCanvasColor (color) {
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, c.width/2, c.height/2);
+  }
+
+  var glsl = Glsl({
+    canvas: document.createElement("canvas"),
+    fragment: ["#ifdef GL_ES",
+    "precision mediump float;",
+    "#endif",
+    "uniform vec2 resolution;",
+    "uniform sampler2D c;"+
+    "void main (void) { gl_FragColor = texture2D(c, gl_FragCoord.xy/resolution); }",
+    ""].join("\n"),
+    variables: {
+      c: c
+    },
+    update: function (t, d) {
+      if (t < D) {
+        setCanvasColor("rgb(0,255,0)");
+        this.sync("c");
+      }
+      else if (t < 2*D) {
+        if (!S[1]) {
+          S[1] = true;
+          var color = getFirstPixelColor(this.canvas);
+          ok(color[0]==0 && color[1]==255 && color[2]==0, "color is green");
+          setCanvasColor("rgb(0,0,255)");
+          this.sync("c");
+        }
+      }
+      else {
+        var color = getFirstPixelColor(this.canvas);
+        ok(color[0]==0 && color[1]==0 && color[2]==255, "color is blue");
+        glsl.stop();
+        start();
+      }
+    }
+  });
+
+  glsl.start();
+});
