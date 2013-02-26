@@ -58,6 +58,10 @@ limitations under the License.
 
   var genid = (function (i) { return function () { return ++i; } })(0);
 
+  function isArray (a) {
+    return 'length' in a; // duck typing
+  }
+
   /** 
    * Creates a new Glsl.
    * init(), update() and render() are called When GL is ready.
@@ -92,12 +96,12 @@ limitations under the License.
 
     if (!this.uniformTypes.resolution) throw new Error("Glsl: You must use a 'vec2 resolution' in your shader.");
 
-    for (var v in this.uniformTypes) {
-      if (!(v in this.variables) && v!="resolution") {
-        warn("variable '"+v+"' not initialized");
+    for (var key in this.uniformTypes) {
+      if (!(key in this.variables) && key!="resolution") {
+        warn("variable '"+key+"' not initialized");
       }
     }
-    
+
     this.initGL();
     this.load();
     this.syncAll();
@@ -220,7 +224,7 @@ limitations under the License.
     },
 
     // ~~~ Going Private Now
-
+    
     initGL: function () {
       var self = this;
       this.canvas.addEventListener("webglcontextlost", function(event) {
@@ -350,17 +354,42 @@ limitations under the License.
         switch (t) {
           case "2f":
           case "2i":
-            gl[fn].call(gl, loc, value.x, value.y);
+            if (isArray(value))
+              gl[fn].call(gl, loc, value[0], value[1]);
+            else if ('x' in value && 'y' in value)
+              gl[fn].call(gl, loc, value.x, value.y);
+            else if ('s' in value && 't' in value)
+              gl[fn].call(gl, loc, value.s, value.t);
+            else
+              error("variable '"+varpath+"' is not valid for binding to vec2(). Use an Array, a {x,y} or a {s,t}.");
             break;
 
           case "3f":
           case "3i":
-            gl[fn].call(gl, loc, value.x, value.y, value.z);
+            if (isArray(value))
+              gl[fn].call(gl, loc, value[0], value[1], value[2]);
+            else if ('x' in value && 'y' in value && 'z' in value)
+              gl[fn].call(gl, loc, value.x, value.y, value.z);
+            else if ('s' in value && 't' in value && 'p' in value)
+              gl[fn].call(gl, loc, value.s, value.t, value.p);
+            else if ('r' in value && 'g' in value && 'b' in value)
+              gl[fn].call(gl, loc, value.r, value.g, value.b);
+            else
+              error("variable '"+varpath+"' is not valid for binding to vec3(). Use an Array, a {x,y,z}, a {r,g,b} or a {s,t,p}.");
             break;
 
           case "4f":
           case "4i":
-            gl[fn].call(gl, loc, value.x, value.y, value.z, value.w);
+            if (isArray(value))
+              gl[fn].call(gl, loc, value[0], value[1], value[2], value[3]);
+            else if ('x' in value && 'y' in value && 'z' in value && 'w' in value)
+              gl[fn].call(gl, loc, value.x, value.y, value.z, value.w);
+            else if ('s' in value && 't' in value && 'p' in value && 'q' in value)
+              gl[fn].call(gl, loc, value.s, value.t, value.p, value.q);
+            else if ('r' in value && 'g' in value && 'b' in value && 'a' in value)
+              gl[fn].call(gl, loc, value.r, value.g, value.b, value.a);
+            else
+              error("variable '"+varpath+"' is not valid for binding to vec4(). Use an Array, a {x,y,z,w}, a {r,g,b,a} or a {s,t,p,q}.");
             break;
 
           case "sampler2D": 
@@ -368,8 +397,8 @@ limitations under the License.
             break;
 
           default:
-            if (gl[fn])
-              gl[fn].call(gl, loc, value);
+            if (fn in gl)
+              gl[fn].call(gl, loc, value); // works for simple types and arrays
             else
               error("type '"+type+"' not found.");
             break;
