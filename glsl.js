@@ -84,19 +84,17 @@ limitations under the License.
         throw new Error("Glsl: '"+requiredOptions[i]+"' is required.");
 
     this.canvas = options.canvas;
-    this.fragment = options.fragment;
     this.variables = options.variables; // Variable references
     this.init = options.init || function(t){};
     this.update = options.update || function(t){};
     this.ready = options.ready || function(t){};
 
-    this.parseDefines();
-    this.parseStructs();
-    this.parseUniforms();
+    this.prog = new Glsl.Program ('attribute vec2 position; void main() { gl_Position = vec4(2.0*position-1.0, 0.0, 1.0);}', options.fragment);
+    this.defines = this.prog.defines;
+    
+    if (!this.prog.uniformTypes.resolution) throw new Error("Glsl: You must use a 'vec2 resolution' in your shader.");
 
-    if (!this.uniformTypes.resolution) throw new Error("Glsl: You must use a 'vec2 resolution' in your shader.");
-
-    for (var key in this.uniformTypes) {
+    for (var key in this.prog.uniformTypes) {
       if (!(key in this.variables) && key!="resolution") {
         warn("variable '"+key+"' not initialized");
       }
@@ -120,8 +118,25 @@ limitations under the License.
     return !!getWebGLContext(document.createElement("canvas"));
   };
 
-  Glsl.prototype = {
+  /**
+   * A WebGL program with shaders and variables.
+   * @param {String} vertex The vertex shader source code.
+   * @param {String} fragment The fragment shader source code.
+   * @public
+   */
+  Glsl.Program = function (vertex, fragment) {
+    this.gl = null;
+    this.vertex = vertex;
+    this.fragment = fragment;
+    
+    var src = vertex + '\n' + fragment;
+    this.parseDefines(src);
+    this.parseStructs(src);
+    this.parseUniforms(src);
+  };
 
+  Glsl.Program.prototype = {
+      
     /**
      * A map containing all the #define declarations of the GLSL.
      *
@@ -129,121 +144,12 @@ limitations under the License.
      * @public
      */
     defines: null,
-
-    // ~~~ Public Methods
-
-    /**
-     * Starts/Continues the render and update loop.
-     * The call is not mandatory if you need a one time rendering, but don't need to update things through time (rendering is performed once at Glsl instanciation).
-     * @return the Glsl instance.
-     * @public
-     */
-    start: function () {
-      var self = this;
-      self._stop = false;
-      if (self._running) return self;
-      var id = self._running = genid();
-      var startTime = Date.now();
-      var lastTime = self._stopTime||0;
-      //log("start at "+lastTime);
-      requestAnimationFrame(function loop () {
-        var t = Date.now()-startTime+(self._stopTime||0);
-        if (self._stop || self._running !== id) { // handle stop request and ensure the last start loop is running
-          //log("stop at "+t);
-          self._running = 0;
-          self._stopTime = t;
-        }
-        else {
-          requestAnimationFrame(loop, self.canvas);
-          var delta = t-lastTime;
-          lastTime = t;
-          self.update(t, delta);
-          self.render();
-        }
-      }, self.canvas);
-      return self;
-    },
-
-    /**
-     * Pauses the render and update loop.
-     * @return the Glsl instance.
-     * @public
-     */
-    stop: function () {
-      this._stop = true;
-      return this;
-    },
-
-    /** 
-     * Synchronizes variables from the Javascript into the GLSL.
-     * @param {String} variableNames* all variables to synchronize.
-     * @return the Glsl instance.
-     * @public
-     */
-    sync: function (/*var1, var2, ...*/) {
-      for (var i=0; i<arguments.length; ++i) {
-        var v = arguments[i];
-        this.syncVariable(v);
-      }
-      return this;
-    },
-
-    /** 
-     * Synchronizes all variables.
-     * Prefer using sync for a deeper optimization.
-     * @return the Glsl instance.
-     * @public
-     */
-    syncAll: function () {
-      for (var v in this.variables) this.syncVariable(v);
-      return this;
-    },
-
-    /**
-     * Set and synchronize a variable to a value.
-     *
-     * @param {String} vname the variable name to set and synchronize.
-     * @param {Any} vvalue the value to set.
-     * @return the Glsl instance.
-     * @public
-     */
-    set: function (vname, vvalue) {
-      this.variables[vname] = vvalue;
-      this.sync(vname);
-      return this;
-    },
-
-    /**
-     * Resize the canvas with a new width and height.
-     * @public
-     */
-    setSize: function (width, height) {
-      this.canvas.width = width;
-      this.canvas.height = height;
-      this.syncResolution();
-    },
-
+      
     // ~~~ Going Private Now
-    
-    initGL: function () {
-      var self = this;
-      this.canvas.addEventListener("webglcontextlost", function(event) {
-        event.preventDefault();
-      }, false);
-      this.canvas.addEventListener("webglcontextrestored", function () {
-        self.running && self.syncAll();
-        self.load();
-      }, false);
-      this.gl = this.getWebGLContext(this.canvas);
-    },
 
-    render: function () {
-      this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
-    },
-
-    parseDefines: function () {
+    parseDefines: function (src) {
       this.defines = {};
-      var lines = this.fragment.split("\n");
+      var lines = src.split("\n");
       for (var l=0; l<lines.length; ++l) {
         var matches = lines[l].match(rDefine);
         if (matches && matches.length==3) {
@@ -254,9 +160,9 @@ limitations under the License.
       }
     },
 
-    parseStructs: function () {
+    parseStructs: function (src) {
       this.structTypes = {};
-      var structs = this.fragment.match(rStruct);
+      var structs = src.match(rStruct);
       if (!structs) return;
       for (var s=0; s<structs.length; ++s) {
         var struct = structs[s];
@@ -282,9 +188,9 @@ limitations under the License.
       }
     },
 
-    parseUniforms: function () {
+    parseUniforms: function (src) {
       this.uniformTypes = {};
-      var lines = this.fragment.split("\n");
+      var lines = src.split("\n");
       for (var l=0; l<lines.length; ++l) {
         var line = lines[l];
         var matches = line.match(rUniform);
@@ -302,8 +208,8 @@ limitations under the License.
       }
     },
 
-    syncVariable: function (name) {
-      return this.recSyncVariable(name, this.variables[name], this.uniformTypes[name],  name);
+    syncVariable: function (name, value) {
+      return this.recSyncVariable(name, value, this.uniformTypes[name],  name);
     },
 
     recSyncVariable: function (name, value, type, varpath) {
@@ -474,28 +380,7 @@ limitations under the License.
       }
     },
 
-    getWebGLContext: function () {
-      return getWebGLContext(this.canvas);
-    },
-
-    syncResolution: function () {
-      var gl = this.gl;
-      var w = this.canvas.width, h = this.canvas.height;
-      gl.viewport(0, 0, w, h);
-      var resolutionLocation = this.locations.resolution;
-      gl.uniform2f(resolutionLocation, w, h);
-      var x1 = 0, y1 = 0, x2 = w, y2 = h;
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-            x1, y1,
-            x2, y1,
-            x1, y2,
-            x1, y2,
-            x2, y1,
-            x2, y2]), gl.STATIC_DRAW);
-    },
-
     load: function () {
-      var w = this.canvas.width, h = this.canvas.height;
       var gl = this.gl;
 
       // Clean old program
@@ -506,7 +391,7 @@ limitations under the License.
 
       // Create new program
       this.program = this.loadProgram([
-        this.loadShader('attribute vec2 position; void main() { gl_Position = vec4(2.0*position-1.0, 0.0, 1.0);}', gl.VERTEX_SHADER), 
+        this.loadShader(this.vertex, gl.VERTEX_SHADER), 
         this.loadShader(this.fragment, gl.FRAGMENT_SHADER)
       ]);
       gl.useProgram(this.program);
@@ -525,15 +410,6 @@ limitations under the License.
       this.textureUnitForNames = {};
       this.textureForTextureUnit = {};
       this.textureUnitCounter = 0;
-
-      // position
-      var buffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-      var positionLocation = gl.getAttribLocation(this.program, "position");
-      gl.enableVertexAttribArray(positionLocation);
-      gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-      this.syncResolution();
     },
 
     loadProgram: function (shaders) {
@@ -559,7 +435,7 @@ limitations under the License.
       gl.compileShader(shader);
       var compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
       if (!compiled) {
-        lastError = gl.getShaderInfoLog(shader);
+        var lastError = gl.getShaderInfoLog(shader);
         var split = lastError.split(":");
         var col = parseInt(split[1], 10);
         var line = parseInt(split[2], 10);
@@ -574,6 +450,169 @@ limitations under the License.
       }
       return shader;
     }
+  };
+
+
+
+  Glsl.prototype = {
+
+    /**
+     * A map containing all the #define declarations of the GLSL.
+     *
+     * You can use it to synchronize some constants between GLSL and Javascript (like an array capacity).
+     * @public
+     */
+    defines: null,
+
+    // ~~~ Public Methods
+
+    /**
+     * Starts/Continues the render and update loop.
+     * The call is not mandatory if you need a one time rendering, but don't need to update things through time (rendering is performed once at Glsl instanciation).
+     * @return the Glsl instance.
+     * @public
+     */
+    start: function () {
+      var self = this;
+      self._stop = false;
+      if (self._running) return self;
+      var id = self._running = genid();
+      var startTime = Date.now();
+      var lastTime = self._stopTime||0;
+      //log("start at "+lastTime);
+      requestAnimationFrame(function loop () {
+        var t = Date.now()-startTime+(self._stopTime||0);
+        if (self._stop || self._running !== id) { // handle stop request and ensure the last start loop is running
+          //log("stop at "+t);
+          self._running = 0;
+          self._stopTime = t;
+        }
+        else {
+          requestAnimationFrame(loop, self.canvas);
+          var delta = t-lastTime;
+          lastTime = t;
+          self.update(t, delta);
+          self.render();
+        }
+      }, self.canvas);
+      return self;
+    },
+
+    /**
+     * Pauses the render and update loop.
+     * @return the Glsl instance.
+     * @public
+     */
+    stop: function () {
+      this._stop = true;
+      return this;
+    },
+
+    /** 
+     * Synchronizes variables from the Javascript into the GLSL.
+     * @param {String} variableNames* all variables to synchronize.
+     * @return the Glsl instance.
+     * @public
+     */
+    sync: function (/*var1, var2, ...*/) {
+      for (var i=0; i<arguments.length; ++i) {
+        var v = arguments[i];
+        this.syncVariable(v);
+      }
+      return this;
+    },
+
+    /** 
+     * Synchronizes all variables.
+     * Prefer using sync for a deeper optimization.
+     * @return the Glsl instance.
+     * @public
+     */
+    syncAll: function () {
+      for (var v in this.variables) this.syncVariable(v);
+      return this;
+    },
+
+    /**
+     * Set and synchronize a variable to a value.
+     *
+     * @param {String} vname the variable name to set and synchronize.
+     * @param {Any} vvalue the value to set.
+     * @return the Glsl instance.
+     * @public
+     */
+    set: function (vname, vvalue) {
+      this.variables[vname] = vvalue;
+      this.sync(vname);
+      return this;
+    },
+
+    /**
+     * Resize the canvas with a new width and height.
+     * @public
+     */
+    setSize: function (width, height) {
+      this.canvas.width = width;
+      this.canvas.height = height;
+      this.syncResolution();
+    },
+
+    // ~~~ Going Private Now
+    
+    initGL: function () {
+      var self = this;
+      this.canvas.addEventListener("webglcontextlost", function(event) {
+        event.preventDefault();
+      }, false);
+      this.canvas.addEventListener("webglcontextrestored", function () {
+        self.running && self.syncAll();
+        self.load();
+      }, false);
+      this.gl = this.prog.gl = this.getWebGLContext(this.canvas);
+    },
+
+    render: function () {
+      this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+    },
+
+    getWebGLContext: function () {
+      return getWebGLContext(this.canvas);
+    },
+
+    syncVariable: function (name) {
+      return this.prog.syncVariable(name, this.variables[name]);
+    },
+
+    load: function() {
+      var gl = this.gl;
+      this.prog.load();
+      
+      // position
+      var buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      var positionLocation = gl.getAttribLocation(this.prog.program, "position");
+      gl.enableVertexAttribArray(positionLocation);
+      gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
+
+      this.syncResolution();
+    },
+            
+    syncResolution: function () {
+      var gl = this.gl;
+      var w = this.canvas.width, h = this.canvas.height;
+      gl.viewport(0, 0, w, h);
+      var resolutionLocation = this.prog.locations.resolution;
+      gl.uniform2f(resolutionLocation, w, h);
+      var x1 = 0, y1 = 0, x2 = w, y2 = h;
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            x1, y1,
+            x2, y1,
+            x1, y2,
+            x1, y2,
+            x2, y1,
+            x2, y2]), gl.STATIC_DRAW);
+    }
+
   };
 
   function getWebGLContext (canvas) {
