@@ -144,7 +144,17 @@ limitations under the License.
      * @public
      */
     defines: null,
-      
+
+    /** 
+     * Synchronize a variable from the Javascript into the GLSL.
+     * @param {String} name variable name to synchronize.
+     * @param {String} value variable value.
+     * @public
+     */
+    syncVariable: function (name, value) {
+      this.recSyncVariable(name, value, this.uniformTypes[name],  name);
+    },
+
     // ~~~ Going Private Now
 
     parseDefines: function (src) {
@@ -208,10 +218,6 @@ limitations under the License.
       }
     },
 
-    syncVariable: function (name, value) {
-      return this.recSyncVariable(name, value, this.uniformTypes[name],  name);
-    },
-
     recSyncVariable: function (name, value, type, varpath) {
       var gl = this.gl;
       if (!type) {
@@ -227,7 +233,7 @@ limitations under the License.
       var loc = this.locations[varpath];
       if (type in this.structTypes) {
         var structType = this.structTypes[type];
-                if (arrayType) {
+        if (arrayType) {
           for (var i=0; i<arrayLength && i<value.length; ++i) {
             var pref = varpath+"["+i+"].";
             var v = value[i];
