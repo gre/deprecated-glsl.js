@@ -7,12 +7,22 @@
  !-->
 
 <link href='http://fonts.googleapis.com/css?family=Fjalla+One' rel='stylesheet' type='text/css'>
-<style type="text/css">body, html { font-family: "Fjalla One"; } a { color: #000; }</style>
+ 
+<style type="text/css">
+  html, body, a {
+    color: #8B7;
+    background: #000;
+    font-family: "Fjalla One";
+  }
+</style>
 
-<h1><a href="..">glsl.js</a></h1>
-<h2>Snake in Canvas2D + WebGL post-processing effects</h2>
+<h1>Psychedelic Snake</h1>
+<h2>Canvas2D + WebGL post-processing effects</h2>
 
-<canvas id="viewport" width="600" height="400"></canvas>
+<div style="position: relative">
+  <div id="score" style="color: red; position: absolute; top: 5px; left: 10px; font-size: 2em">0</div>
+  <canvas id="viewport" width="600" height="400"></canvas>
+</div>
 
 <p>
   <a href="javascript: showMe()">Curious? Show me how does it works!</a>
@@ -43,6 +53,8 @@
   uniform vec2 position;
   uniform float time;
   uniform sampler2D game;
+  uniform float appleEaten;
+  uniform float gameOverTime;
 
   // pseudo-random
   float rand(vec2 co){
@@ -53,13 +65,13 @@
     vec2 p = gl_FragCoord.xy / resolution.xy;
     float dist = distance(p, position);
 
-    p.x += 0.1*smoothstep(0.3, 2.0, dist)*rand(p+time*0.013);
-    p.y += 0.1*smoothstep(0.3, 2.0, dist)*rand(p+time*0.011);
+    p.x += 0.1*smoothstep(0.3, 2.0, dist)*rand(p+time*0.023);
+    p.y += 0.1*smoothstep(0.3, 2.0, dist)*rand(p+time*0.021);
 
     vec2 center = vec2( 0.5, 0.5 );
 
-    float amp = 0.02-0.02*cos(0.0002*time);
-    float mag = 20. - 10.*cos(0.0001*time);
+    float amp = 0.03-0.02*cos((appleEaten*0.00004)*time);
+    float mag = 20. - 20.*cos((appleEaten*0.00006)*time);
 
     vec2 coord = p;
     coord.x = coord.x + amp*cos(mag*coord.y);
@@ -70,6 +82,18 @@
 
     if (time < 1000.) {
       c += smoothstep(1000., 0., time);
+    }
+
+    c += 0.*vec3(
+        sin(0.005*time + coord.x*30.), 
+        cos(0.004*time + coord.y*30.), 
+        0.0
+      );
+
+    float scaryTime = cos(time*0.001);
+    if (scaryTime > 0.9) {
+      float t = smoothstep(0.9, 1.0, scaryTime);
+      c += 0.8*(smoothstep(0.0, 0.5, cos(t*10.)) - 0.9*t);
     }
 
     gl_FragColor = vec4(c, 1.0);
@@ -85,6 +109,8 @@
 
   // globals
   var position = { x: 0.1, y: 0.5 }; // position of the player in [0, 1] range
+  var gameOverTime = 0;
+  var appleEaten = 0;
 
   /*********************
    * snake game logic  *
@@ -106,7 +132,6 @@
     var direction = [ 1, 0 ];
     var nextDirection = null;
     var tailExtension = 4;
-    var appleEaten = 0;
 
     window.addEventListener("keydown", function (e) {
       switch (e.keyCode) {
@@ -193,10 +218,10 @@
       var head = snake[0];
       var x = head[0], y = head[1];
 
-      x += direction[0];
-      y += direction[1];
+      x = (CELL_SIZE_W+x+direction[0]) % CELL_SIZE_W;
+      y = (CELL_SIZE_H+y+direction[1]) % CELL_SIZE_H;
 
-      if (outOfBounds(x, y) || collideSnake(x, y)) return false;
+      if (/*outOfBounds(x, y) ||*/ collideSnake(x, y)) return false;
 
       if (tailExtension > 0)
         tailExtension --;
@@ -209,8 +234,8 @@
       position.y = 1 - y / CELL_SIZE_H;
 
       if (eatApple (x, y)) {
-        appleEaten ++;
-        tailExtension ++;
+        appleEaten += 1;
+        tailExtension += 2;
         updateSpeed();
       }
 
@@ -233,6 +258,7 @@
       if (time < 1000) return false; // wait 1 second
       if (time - lastMove < refreshRate) return false;
       lastMove = time;
+      if (gameOverTime) return true;
 
       var moved = move();
       
@@ -261,18 +287,24 @@
    * GLSL post-processing effect *
    *******************************
    */
+  var score = document.getElementById("score");
   var glsl = Glsl({
     canvas: document.getElementById("viewport"),
     fragment: document.getElementById("fragment").textContent,
     variables: {
       time: 0,
       game: game.canvas,
-      position: position
+      position: position,
+      appleEaten: appleEaten,
+      gameOverTime: gameOverTime
     },
     update: function (time, delta) {
       this.set("time", time);
+      this.set("appleEaten", appleEaten);
+      this.set("gameOverTime", gameOverTime);
       if (game.update(time, delta)) {
         this.sync("game", "position");
+        score.innerHTML = appleEaten;
       }
     }
   });
@@ -280,10 +312,10 @@
   /// some auxiliary functions ///
 
   function gameOver (score) {
-    if (confirm("score = "+score+"\n\nReload this page and Try again?")) {
-      window.location = window.location;
+    gameOverTime = +new Date();
+    if (confirm("Game Over.\nYou made a score of "+score+"\n\nTry Again?")) {
+      window.location.reload();
     }
-    glsl.stop();
   }
 
   function showMe () {
