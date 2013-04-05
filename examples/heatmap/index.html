@@ -27,7 +27,7 @@
   uniform vec2 resolution;
   uniform float time;
 
-  #define MAX_POINTS 20
+  #define MAX_POINTS 30
 
   uniform vec4 points[MAX_POINTS]; // a point is: a position (x, y), a distance (z), a weight (w)
   uniform int pointsLength;
@@ -82,7 +82,7 @@
     },
     update: function (time, delta) {
       // move a bit all points
-      var speed = 0.005*delta;
+      var speed = 0.003*delta;
       for (var i = 0; i<this.defines.MAX_POINTS; ++i) {
         points[4*i] = smoothstep(0, 1, points[4*i] + speed*(Math.random()-0.5));
         points[4*i+1] = smoothstep(0, 1, points[4*i+1] + speed*(Math.random()-0.5));
