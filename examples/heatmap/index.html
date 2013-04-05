@@ -1,6 +1,9 @@
 <!DOCTYPE html>
-
+<link href='http://fonts.googleapis.com/css?family=Fjalla+One' rel='stylesheet' type='text/css'>
 <style type="text/css">
+  body, html {
+    font-family: "Fjalla One";
+  }
   a {
     color: #000;
   }
@@ -24,12 +27,13 @@
   uniform vec2 resolution;
   uniform float time;
 
-  #define MAX_POINTS 10
+  #define MAX_POINTS 20
 
-  uniform vec3 points[MAX_POINTS];
+  uniform vec4 points[MAX_POINTS]; // a point is: a position (x, y), a distance (z), a weight (w)
   uniform int pointsLength;
 
-  vec3 heat (float value) {
+  vec3 heat (float v) {
+    float value = 1.-v;
     return (0.5+0.5*smoothstep(0.0, 0.1, value))*vec3(
       smoothstep(0.5, 0.3, value),
       value < 0.3 ? smoothstep(0.0, 0.3, value) : smoothstep(1.0, 0.6, value),
@@ -41,10 +45,10 @@
     vec2 p = gl_FragCoord.xy / resolution.xy;
     float sum = 0.0;
     for (int i=0; i<MAX_POINTS; ++i) { if (i == pointsLength) break;
-      vec3 point = points[i];
-      sum += smoothstep(0.0, point.z, distance(point.xy, p));
+      vec4 point = points[i];
+      sum += point.w*smoothstep(point.z, 0.0, distance(point.xy, p));
     }
-    gl_FragColor = vec4(heat(sum/float(pointsLength)), 1.0);
+    gl_FragColor = vec4(heat(sum), 1.0);
   }
 </script>
 
@@ -54,7 +58,7 @@
   if (!Glsl.supported()) alert("WebGL is not supported.");
 
   function smoothstep (a, b, v) {
-    return Math.max(0, Math.min((v-a)/(b-a), 1));
+    return Math.max(0, Math.min((v-a)/(b-a), 1)); // not really smooth, but enough to constraints a value
   }
 
   Glsl({
@@ -65,27 +69,33 @@
       pointsLength: 0
     },
     init: function () {
-      points = new Float32Array(this.defines.MAX_POINTS*3);
+      // Current version just fill up with MAX_POINTS
+      points = new Float32Array(this.defines.MAX_POINTS*4);
       for (var i = 0; i<this.defines.MAX_POINTS; ++i) {
-        points[3*i] = 0.5;
-        points[3*i+1] = 0.5;
-        points[3*i+2] = 0.5;
+        points[4*i] = 0.5; // x
+        points[4*i+1] = 0.5; // y
+        points[4*i+2] = 0.2; // distance
+        points[4*i+3] = 0.3; // weight
       }
       this.set("points", points);
       this.set("pointsLength", this.defines.MAX_POINTS);
     },
     update: function (time, delta) {
+      // move a bit all points
       var speed = 0.005*delta;
       for (var i = 0; i<this.defines.MAX_POINTS; ++i) {
-        points[3*i] = smoothstep(0, 1, points[3*i] + speed*(Math.random()-0.5));
-        points[3*i+1] = smoothstep(0, 1, points[3*i+1] + speed*(Math.random()-0.5));
-        points[3*i+2] = (2+Math.sin(time/1000))*0.3;
+        points[4*i] = smoothstep(0, 1, points[4*i] + speed*(Math.random()-0.5));
+        points[4*i+1] = smoothstep(0, 1, points[4*i+1] + speed*(Math.random()-0.5));
       }
-      this.set("points", points);
+      this.sync("points");
       this.set("time", time);
     }
   }).start();
 </script>
+
+<p>
+  Source code is small, <strong>View Source</strong> of the page.
+</p>
 
 <a href="..">Back to more examples</a>
 
