@@ -100,7 +100,7 @@ limitations under the License.
       }
     }
 
-    this.initGL();
+    this.initGL(options.contextArgs);
     this.load();
     this.syncAll();
     this.init();
@@ -565,7 +565,7 @@ limitations under the License.
 
     // ~~~ Going Private Now
     
-    initGL: function () {
+    initGL: function (contextArgs) {
       var self = this;
       this.canvas.addEventListener("webglcontextlost", function(event) {
         event.preventDefault();
@@ -574,15 +574,15 @@ limitations under the License.
         self.running && self.syncAll();
         self.load();
       }, false);
-      this.gl = this.prog.gl = this.getWebGLContext(this.canvas);
+      this.gl = this.prog.gl = this.getWebGLContext(this.canvas, contextArgs);
     },
 
     render: function () {
       this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
     },
 
-    getWebGLContext: function () {
-      return getWebGLContext(this.canvas);
+    getWebGLContext: function (canvas, contextArgs) {
+      return getWebGLContext(canvas, contextArgs);
     },
 
     syncVariable: function (name) {
@@ -621,12 +621,12 @@ limitations under the License.
 
   };
 
-  function getWebGLContext (canvas) {
+  function getWebGLContext (canvas, contextArgs) {
     if (!canvas.getContext) return;
     var names = ["webgl", "experimental-webgl"];
     for (var i = 0; i < names.length; ++i) {
       try {
-        var ctx = canvas.getContext(names[i]);
+        var ctx = canvas.getContext(names[i], contextArgs);
         if (ctx) return ctx;
       } catch(e) {}
     }
