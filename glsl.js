@@ -73,6 +73,7 @@ limitations under the License.
    * @param {Function} [options.update] The update function to call each frame. (the relative time from the start() and the time since the last update) in milliseconds is given to the function.
    * @param {Function} [options.init] Call once when GL is initialized.
    * @param {Function} [options.ready] Call after the first render has been achieved.
+   * @param {Object} [options.contextArgs] Specify WebGLContextAttributes.  See http://www.khronos.org/registry/webgl/specs/latest/#5.2
    *
    * @namespace
    */
