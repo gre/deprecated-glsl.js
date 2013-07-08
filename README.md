@@ -1,4 +1,4 @@
-* [Read the blog article](http://blog.greweb.fr/?p=2130)
+* [Read the blog article](http://greweb.me/2013/02/glsl-js-a-javascript-glsl-library-dry-efficient/)
 * [Open Examples](http://greweb.fr/glsl.js/examples)
 * [API Documentation](http://greweb.fr/glsl.js/docs)
 * [Unit tests](http://greweb.fr/glsl.js/test)
@@ -23,7 +23,7 @@ The concept is to split the **rendering part in a GLSL fragment** from the **log
 **glsl.js** aims to abstract every GL functions so you don't have to learn any OpenGL API.
 What you only need to care about is the logic in Javascript and the rendering in GLSL.
 
-For more infos, [read the blog article](http://blog.greweb.fr/?p=2130).
+For more infos, [read the blog article](http://greweb.me/2013/02/glsl-js-a-javascript-glsl-library-dry-efficient/).
 
 Licence
 =======

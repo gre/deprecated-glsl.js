@@ -10,6 +10,8 @@ all: clean $(LIB) doc
 	@echo "Minimizing Javascript remotely..."
 	@curl -s -d compilation_level=SIMPLE_OPTIMIZATIONS -d output_format=text -d output_info=compiled_code --data-urlencode "js_code@$<" http://closure-compiler.appspot.com/compile >> $@ && echo "'$@' minimized."
 
+jslint:
+	jsl -conf jsl.default.conf -process glsl.js
 
 doc:
 	@mkdir $(DOC)
@@ -18,3 +20,5 @@ doc:
 
 clean:
 	@rm -rf $(LIB) docs/
+
+.PHONY: test
