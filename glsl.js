@@ -14,7 +14,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-(function () {
+(function (definition) {
+  if (typeof exports === "object") {
+    module.exports = definition();
+  }
+  else if (typeof define === "function" && define.amd) {
+    define(definition);
+  }
+  else {
+    window.Glsl = definition();
+  }
+})(function () {
 
   var requiredOptions = ["fragment", "canvas", "variables"];
 
@@ -77,7 +87,7 @@ limitations under the License.
    *
    * @namespace
    */
-  this.Glsl = function (options) {
+  var Glsl = function (options) {
     if ( !(this instanceof arguments.callee) ) return new arguments.callee(options);
     if (!options) throw new Error("Glsl: {"+requiredOptions+"} are required.");
     for (var i=0; i<requiredOptions.length; i++)  
@@ -633,6 +643,7 @@ limitations under the License.
     }
   }
 
+// FIXME: following polyfill should be out of the lib
 // http://paulirish.com/2011/requestanimationframe-for-smart-animating/
 // http://my.opera.com/emoller/blog/2011/12/20/requestanimationframe-for-smart-er-animating
 
@@ -664,4 +675,6 @@ limitations under the License.
         };
 }());
 
-}());
+  return Glsl;
+
+});
